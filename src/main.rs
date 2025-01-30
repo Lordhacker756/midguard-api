@@ -1,4 +1,5 @@
 mod constant;
+mod model;
 use axum::{routing::get, Router};
 use dotenv::dotenv;
 use std::env;
@@ -7,7 +8,9 @@ mod client;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let res = client::proxy::get_data().await.unwrap();
+    let res = client::proxy::get_prev_2_months_price_history()
+        .await
+        .unwrap();
 
     let _msg = env::var("MSG");
     print!("Enum for Min is {:?}", constant::enums::INTERVALS::Min);
