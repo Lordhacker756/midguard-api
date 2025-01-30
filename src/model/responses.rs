@@ -107,3 +107,16 @@ pub struct SwapInterval {
     pub totalVolume: String,
     pub totalVolumeUSD: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RunepoolHistoryResponse {
+    pub intervals: Vec<RunepoolInterval>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RunepoolInterval {
+    pub count: String,
+    pub startTime: String,
+    pub endTime: String,
+    pub units: String,
+}
