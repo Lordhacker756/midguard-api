@@ -1,20 +1,23 @@
-mod constant;
-mod model;
 use axum::{routing::get, Router};
 use dotenv::dotenv;
-use std::env;
-mod client;
+use sqlx::Row;
+
+mod db;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
-    let res = client::proxy::sync_all_data().await.unwrap();
+    let pool = db::database::initialize_database().await?;
 
-    let _msg = env::var("MSG");
-    print!("Enum for Min is {:?}", constant::enums::INTERVALS::Min);
+    let res = sqlx::query("SELECT 1+1 as sum").fetch_one(&pool).await?;
+
+    let sum: i32 = res.get("sum");
+    println!("1 + 1 is {}", sum);
+
     let app = Router::new().route("/", get(|| async { "Supp ()" }));
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!("Running server at port🌐::{}", 3000);
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
