@@ -8,9 +8,7 @@ mod client;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let res = client::proxy::get_prev_2_months_runepool_history()
-        .await
-        .unwrap();
+    let res = client::proxy::sync_all_data().await.unwrap();
 
     let _msg = env::var("MSG");
     print!("Enum for Min is {:?}", constant::enums::INTERVALS::Min);

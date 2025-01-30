@@ -154,3 +154,18 @@ pub async fn get_prev_2_months_runepool_history() -> Result<Vec<RunepoolInterval
     );
     Ok(final_data)
 }
+
+pub async fn sync_all_data() -> Result<(), reqwest::Error> {
+    println!("\n\n=========Syncing Price History 🔄===========");
+    get_prev_2_months_price_history().await.unwrap();
+    println!("\n\n=========Syncing Earning History 🔄===========");
+    get_prev_2_months_earning_history().await.unwrap();
+    println!("\n\n=========Syncing Swap History 🔄===========");
+    get_prev_2_months_swap_history().await.unwrap();
+    println!("\n\n=========Syncing Runepool History 🔄===========");
+    get_prev_2_months_runepool_history().await.unwrap();
+
+    println!("\n\n=========All Endpoints Synced Successfully ✅===========");
+
+    Ok(())
+}
