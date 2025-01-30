@@ -21,3 +21,32 @@ pub struct Interval {
     pub synthUnits: String,
     pub units: String,
 }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EarningHistoryResponse {
+    pub intervals: Vec<EarningInterval>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Pool {
+    pub pool: String,
+    pub assetLiquidityFees: String,
+    pub runeLiquidityFees: String,
+    pub totalLiquidityFeesRune: String,
+    pub saverEarning: String,
+    pub rewards: String,
+    pub earnings: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EarningInterval {
+    pub startTime: String,
+    pub endTime: String,
+    pub liquidityFees: String,
+    pub blockRewards: String,
+    pub earnings: String,
+    pub bondingEarnings: String,
+    pub liquidityEarnings: String,
+    pub avgNodeCount: String,
+    pub runePriceUSD: String,
+    pub pools: Vec<Pool>,
+}
