@@ -8,7 +8,7 @@ mod client;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let res = client::proxy::get_prev_2_monts_earning_history()
+    let res = client::proxy::get_prev_2_months_swap_history()
         .await
         .unwrap();
 
