@@ -2,12 +2,12 @@ use axum::{routing::get, Router};
 use dotenv::dotenv;
 use sqlx::Row;
 
-mod db;
+mod config;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
-    let pool = db::database::initialize_database().await?;
+    let pool = config::database::initialize_database().await?;
 
     let res = sqlx::query("SELECT 1+1 as sum").fetch_one(&pool).await?;
 

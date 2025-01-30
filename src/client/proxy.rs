@@ -1,6 +1,7 @@
 use chrono::Utc;
+mod model;
 
-use crate::model::responses::{
+use model::responses::{
     DepthPriceHistoryResponse, EarningHistoryResponse, EarningInterval, Interval,
     RunepoolHistoryResponse, RunepoolInterval, SwapHistoryResponse, SwapInterval,
 };
