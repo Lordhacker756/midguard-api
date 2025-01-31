@@ -1,4 +1,5 @@
 use axum::{routing::get, Router};
+use config::database;
 use dotenv::dotenv;
 use sqlx::Row;
 
@@ -9,6 +10,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     let pool = config::database::initialize_database().await?;
 
+    database::run_migrations(&pool).await?;
     let res = sqlx::query("SELECT 1+1 as sum").fetch_one(&pool).await?;
 
     let sum: i32 = res.get("sum");
