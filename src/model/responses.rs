@@ -6,7 +6,7 @@ pub struct DepthPriceHistoryResponse {
     pub intervals: Vec<Interval>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Interval {
     pub assetDepth: String,
     pub assetPrice: String,
@@ -26,7 +26,7 @@ pub struct EarningHistoryResponse {
     pub intervals: Vec<EarningInterval>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Pool {
     pub pool: String,
     pub assetLiquidityFees: String,
@@ -37,7 +37,7 @@ pub struct Pool {
     pub earnings: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EarningInterval {
     pub startTime: String,
     pub endTime: String,
