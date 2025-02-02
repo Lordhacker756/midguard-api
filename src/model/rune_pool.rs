@@ -1,21 +1,29 @@
-#![allow(non_snake_case)]
-use num_bigint::BigInt;
+use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-use crate::utils::conversions::deserialize_bigint;
+use crate::dtos::responses::RunepoolInterval;
 
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+
 pub struct Runepool {
-    #[serde(deserialize_with = "deserialize_bigint")]
-    pub count: BigInt,
+    pub count: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub units: i64,
+}
 
-    #[serde(deserialize_with = "deserialize_bigint")]
-    pub start_time: BigInt,
-
-    #[serde(deserialize_with = "deserialize_bigint")]
-    pub end_time: BigInt,
-
-    #[serde(deserialize_with = "deserialize_bigint")]
-    pub units: BigInt,
+impl From<RunepoolInterval> for Runepool {
+    fn from(value: RunepoolInterval) -> Self {
+        Self {
+            count: value.count.parse().unwrap_or(0),
+            start_time: Utc
+                .timestamp_opt(value.start_time.parse().unwrap_or(0), 0)
+                .unwrap(),
+            end_time: Utc
+                .timestamp_opt(value.end_time.parse().unwrap_or(0), 0)
+                .unwrap(),
+            units: value.units.parse().unwrap_or(0),
+        }
+    }
 }

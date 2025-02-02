@@ -8,36 +8,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="877f6a34-8e58-49d0-a292-d9aff48df258" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/dtos/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/0004_rand.down.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/0004_rand.up.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/0_create_price_history_table.down.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/0_create_price_history_table.up.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/1_create_swap_history_table.down.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/1_create_swap_history_table.up.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/2_create_earning_history_table.down.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/2_create_earning_history_table.up.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/3_create_rune_table.down.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/migrations/3_create_rune_table.up.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/client/proxy.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/client/proxy.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/earning_history.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/earning_history.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/earning_history_pool.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/earning_history_pool.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/price_history.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/price_history.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/responses.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dtos/responses.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/rune_pool.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/rune_pool.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/swap_history.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/swap_history.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/repository/earning_history.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/repository/earning_history_pool.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/repository/mod.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/repository/price_history.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/repository/rune_pool.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/repository/swap_history.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/conversions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/conversions.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/service/earning_history_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/service/earning_history_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/service/mod.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -141,7 +117,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1738495172213</updated>
-      <workItem from="1738495173774" duration="2159000" />
+      <workItem from="1738495173774" duration="3358000" />
     </task>
     <servers />
   </component>

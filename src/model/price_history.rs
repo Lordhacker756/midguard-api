@@ -1,9 +1,10 @@
+use crate::dtos::responses::PriceDepthInterval;
 use chrono::{DateTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use crate::dtos::responses::PriceDepthInterval;
+use sqlx::prelude::FromRow;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct PriceHistory {
     pub id: Option<i32>,
     pub start_time: DateTime<Utc>,
@@ -24,8 +25,12 @@ impl From<PriceDepthInterval> for PriceHistory {
     fn from(interval: PriceDepthInterval) -> Self {
         Self {
             id: None,
-            start_time: Utc.timestamp_opt(interval.start_time.parse().unwrap_or(0), 0).unwrap(),
-            end_time: Utc.timestamp_opt(interval.end_time.parse().unwrap_or(0), 0).unwrap(),
+            start_time: Utc
+                .timestamp_opt(interval.start_time.parse().unwrap_or(0), 0)
+                .unwrap(),
+            end_time: Utc
+                .timestamp_opt(interval.end_time.parse().unwrap_or(0), 0)
+                .unwrap(),
             asset_depth: interval.asset_depth.parse().unwrap_or(0),
             rune_depth: interval.rune_depth.parse().unwrap_or(0),
             asset_price: interval.asset_price.parse().unwrap_or(Decimal::ZERO),
@@ -39,4 +44,3 @@ impl From<PriceDepthInterval> for PriceHistory {
         }
     }
 }
-
