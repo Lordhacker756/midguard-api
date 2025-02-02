@@ -1,36 +1,40 @@
+use anyhow::Context;
 use axum::{routing::get, Router};
+use chrono::{DateTime, TimeZone, Utc};
 use client::proxy;
 use config::database;
 use dotenv::dotenv;
-use model::{
-    earning_history::EarningHistory,
-    price_history::PriceHistory,
-    responses::{EarningInterval, Interval},
-};
-use sqlx::Row;
+use service::price_history_service::PriceHistoryService;
+
+use crate::dtos::responses::PriceDepthInterval;
+use model::price_history::PriceHistory;
 
 mod client;
 mod config;
+mod dtos;
 mod model;
-mod repository;
+mod service;
 mod utils;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     let pool = config::database::initialize_database().await?;
 
     database::run_migrations(&pool).await?;
-    let res = sqlx::query("SELECT 1+1 as sum").fetch_one(&pool).await?;
 
-    let sum: i32 = res.get("sum");
-    println!("1 + 1 is {}", sum);
+    // Fetch price history data
+    let intervals: Vec<PriceDepthInterval> = proxy::get_prev_2_months_price_history().await?;
 
-    let res: Vec<EarningInterval> = proxy::get_prev_2_months_earning_history().await?;
+    // Convert response data to database models
+    let price_histories: Vec<PriceHistory> = intervals.into_iter()
+        .map(PriceHistory::from)
+        .collect();
 
-    let converted: EarningHistory = EarningHistory::try_from(res[0].clone())?;
-
-    print!("{:?}", converted);
+    // Initialize service and save data
+    let price_history_service = PriceHistoryService::new(pool.clone());
+    let saved_ids = price_history_service.save_batch(&price_histories).await?;
+    println!("Saved {} price history records", saved_ids.len());
 
     let app = Router::new().route("/", get(|| async { "Supp ()" }));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;

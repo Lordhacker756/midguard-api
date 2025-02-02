@@ -10,31 +10,31 @@ use crate::utils::conversions::{deserialize_bigint, deserialize_decimal};
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct EarningHistory {
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub startTime: BigInt,
+    pub start_time: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub endTime: BigInt,
+    pub end_time: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub liquidityFees: BigInt,
+    pub liquidity_fees: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub blockRewards: BigInt,
+    pub block_rewards: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
     pub earnings: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub bondingEarnings: BigInt,
+    pub bonding_earnings: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub liquidityEarnings: BigInt,
+    pub liquidity_earnings: BigInt,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub avgNodeCount: Decimal,
+    pub avg_node_count: Decimal,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub runePriceUSD: Decimal,
+    pub rune_price_usd: Decimal,
 
     pub pools: Vec<EarningHistoryPool>,
 }

@@ -11,10 +11,10 @@ pub struct Runepool {
     pub count: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub startTime: BigInt,
+    pub start_time: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub endTime: BigInt,
+    pub end_time: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
     pub units: BigInt,

@@ -10,16 +10,16 @@ pub struct EarningHistoryPool {
     pub pool: String,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub assetLiquidityFees: BigInt,
+    pub asset_liquidity_fees: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub runeLiquidityFees: BigInt,
+    pub rune_liquidity_fees: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub totalLiquidityFeesRune: BigInt,
+    pub total_liquidity_fees_rune: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub saverEarning: BigInt,
+    pub saver_earning: BigInt,
 
     #[serde(deserialize_with = "deserialize_bigint")]
     pub rewards: BigInt,

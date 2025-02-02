@@ -9,89 +9,89 @@ use crate::utils::conversions::{deserialize_bigint, deserialize_decimal};
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct SwapHistory {
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub averageSlip: Decimal,
+    pub average_slip: Decimal,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub endTime: BigInt,
+    pub end_time: BigInt,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub fromTradeAverageSlip: Decimal,
+    pub from_trade_average_slip: Decimal,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub fromTradeCount: BigInt,
+    pub from_trade_count: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub fromTradeFees: BigInt,
+    pub from_trade_fees: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub fromTradeVolume: BigInt,
+    pub from_trade_volume: BigInt,
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub fromTradeVolumeUSD: Decimal,
+    pub from_trade_volume_usd: Decimal,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub runePriceUSD: Decimal,
+    pub rune_price_usd: Decimal,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub startTime: BigInt,
+    pub start_time: BigInt,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub synthMintAverageSlip: Decimal,
+    pub synth_mint_average_slip: Decimal,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub synthMintCount: BigInt,
+    pub synth_mint_count: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub synthMintFees: BigInt,
+    pub synth_mint_fees: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub synthMintVolume: BigInt,
+    pub synth_mint_volume: BigInt,
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub synthMintVolumeUSD: Decimal,
+    pub synth_mint_volume_usd: Decimal,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub synthRedeemAverageSlip: Decimal,
+    pub synth_redeem_average_slip: Decimal,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub synthRedeemCount: BigInt,
+    pub synth_redeem_count: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub synthRedeemFees: BigInt,
+    pub synth_redeem_fees: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub synthRedeemVolume: BigInt,
+    pub synth_redeem_volume: BigInt,
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub synthRedeemVolumeUSD: Decimal,
+    pub synth_redeem_volume_usd: Decimal,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub toAssetAverageSlip: Decimal,
+    pub to_asset_average_slip: Decimal,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toAssetCount: BigInt,
+    pub to_asset_count: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toAssetFees: BigInt,
+    pub to_asset_fees: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toAssetVolume: BigInt,
+    pub to_asset_volume: BigInt,
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub toAssetVolumeUSD: Decimal,
+    pub to_asset_volume_usd: Decimal,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub toRuneAverageSlip: Decimal,
+    pub to_rune_average_slip: Decimal,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toRuneCount: BigInt,
+    pub to_rune_count: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toRuneFees: BigInt,
+    pub to_rune_fees: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toRuneVolume: BigInt,
+    pub to_rune_volume: BigInt,
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub toRuneVolumeUSD: Decimal,
+    pub to_rune_volume_usd: Decimal,
 
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub toTradeAverageSlip: Decimal,
+    pub to_trade_average_slip: Decimal,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toTradeCount: BigInt,
+    pub to_trade_count: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toTradeFees: BigInt,
+    pub to_trade_fees: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub toTradeVolume: BigInt,
+    pub to_trade_volume: BigInt,
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub toTradeVolumeUSD: Decimal,
+    pub to_trade_volume_usd: Decimal,
 
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub totalCount: BigInt,
+    pub total_count: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub totalFees: BigInt,
+    pub total_fees: BigInt,
     #[serde(deserialize_with = "deserialize_bigint")]
-    pub totalVolume: BigInt,
+    pub total_volume: BigInt,
     #[serde(deserialize_with = "deserialize_decimal")]
-    pub totalVolumeUSD: Decimal,
+    pub total_volume_usd: Decimal,
 }
