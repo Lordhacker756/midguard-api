@@ -1,20 +1,33 @@
 use chrono::Utc;
+use sqlx::PgPool;
 
-use crate::model::responses::{
-    DepthPriceHistoryResponse, EarningHistoryResponse, EarningInterval, Interval,
-    RunepoolHistoryResponse, RunepoolInterval, SwapHistoryResponse, SwapInterval,
+use crate::{
+    dtos::responses::{
+        DepthPriceHistoryResponse, EarningHistoryResponse, EarningInterval, PriceDepthInterval,
+        RunepoolHistoryResponse, RunepoolInterval, SwapHistoryResponse, SwapInterval,
+    },
+    model::{
+        earning_history::EarningHistory, price_history::PriceHistory, rune_pool::Runepool,
+        swap_history::SwapHistory,
+    },
+    service::{
+        earning_history_service::EarningHistoryService, price_history_service::PriceHistoryService,
+        run_pool_service::RunePoolService, swap_history_service::SwapHistoryService,
+    },
 };
 
-pub async fn get_prev_2_months_price_history() -> Result<Vec<Interval>, reqwest::Error> {
+pub async fn get_prev_2_months_price_history(pool: PgPool) -> Result<(), reqwest::Error> {
     let now = Utc::now();
     let timestamp = now.timestamp();
     let mut from = 1730419200;
 
-    let mut final_data: Vec<Interval> = Vec::new();
+    //todo: Get the last updated timestamp and use it as 'from'
+
+    let mut final_data: Vec<PriceDepthInterval> = Vec::new();
 
     while from < timestamp {
         let url = format!(
-        "https://midgard.ninerealms.com/v2/history/depths/BTC.BTC?interval=hour&&count=400&from={}",
+        "https://midgard.ninerealms.com/v2/history/depths/BTC.BTC?interval=hour&count=400&from={}",
         from
     );
         println!("GET:: {}", url);
@@ -31,17 +44,33 @@ pub async fn get_prev_2_months_price_history() -> Result<Vec<Interval>, reqwest:
 
         final_data.extend(res.intervals);
         let idx = final_data.len() - 1;
-        from = final_data[idx].endTime.parse().expect("Not a valid string")
+        from = final_data[idx]
+            .end_time
+            .parse()
+            .expect("Not a valid string")
     }
     println!(
         "DONE last timestamp @{} and total entries are {}",
-        final_data[final_data.len() - 1].endTime,
+        final_data[final_data.len() - 1].end_time,
         final_data.len()
     );
-    Ok(final_data)
+
+    //Convert the DTO to Db Model
+    let price_history: Vec<PriceHistory> =
+        final_data.iter().cloned().map(PriceHistory::from).collect();
+
+    //Use the corresponding service to push the data to database
+    let price_history_service = PriceHistoryService::new(pool.clone());
+    let ids = price_history_service.save_batch(&price_history).await;
+
+    match ids {
+        Ok(val) => println!("{} rows inserted ✅", val.len()),
+        Err(e) => print!("Error occured {:#?}", e),
+    }
+    Ok(())
 }
 
-pub async fn get_prev_2_months_earning_history() -> Result<Vec<EarningInterval>, reqwest::Error> {
+pub async fn get_prev_2_months_earning_history(pool: PgPool) -> Result<(), reqwest::Error> {
     let now = Utc::now();
     let timestamp = now.timestamp();
     let mut from = 1730419200;
@@ -65,21 +94,38 @@ pub async fn get_prev_2_months_earning_history() -> Result<Vec<EarningInterval>,
             .await?
             .json::<EarningHistoryResponse>()
             .await?;
-
         final_data.extend(res.intervals);
         let idx = final_data.len() - 1;
-        from = final_data[idx].endTime.parse().expect("Not a valid string")
+        from = final_data[idx]
+            .end_time
+            .parse()
+            .expect("Not a valid string")
     }
 
     println!(
         "DONE last timestamp @{} and total entries are {}",
-        final_data[final_data.len() - 1].endTime,
+        final_data[final_data.len() - 1].end_time,
         final_data.len()
     );
-    Ok(final_data)
+
+    let earning_histories: Vec<EarningHistory> = final_data
+        .iter()
+        .cloned()
+        .map(EarningHistory::from)
+        .collect();
+
+    let earning_history_service = EarningHistoryService::new(pool.clone());
+    let res = earning_history_service.save_batch(&earning_histories).await;
+
+    match res {
+        Ok(val) => println!("{} rows inserted ✅", val.len()),
+        Err(e) => print!("Error occured {:#?}", e),
+    }
+
+    Ok(())
 }
 
-pub async fn get_prev_2_months_swap_history() -> Result<Vec<SwapInterval>, reqwest::Error> {
+pub async fn get_prev_2_months_swap_history(pool: PgPool) -> Result<(), reqwest::Error> {
     let now = Utc::now();
     let timestamp = now.timestamp();
     let mut from = 1730419200;
@@ -106,18 +152,27 @@ pub async fn get_prev_2_months_swap_history() -> Result<Vec<SwapInterval>, reqwe
 
         final_data.extend(res.intervals);
         let idx = final_data.len() - 1;
-        from = final_data[idx].endTime.parse().expect("Not a valid string")
+        from = final_data[idx]
+            .end_time
+            .parse()
+            .expect("Not a valid string")
     }
 
-    println!(
-        "DONE last timestamp @{} and total entries are {}",
-        final_data[final_data.len() - 1].endTime,
-        final_data.len()
-    );
-    Ok(final_data)
+    let swap_histories: Vec<SwapHistory> =
+        final_data.iter().cloned().map(SwapHistory::from).collect();
+
+    let swap_history_service = SwapHistoryService::new(pool.clone());
+    let res = swap_history_service.save_batch(&swap_histories).await;
+
+    match res {
+        Ok(val) => println!("{} rows inserted ✅", val.len()),
+        Err(e) => print!("Error occured {:#?}", e),
+    }
+
+    Ok(())
 }
 
-pub async fn get_prev_2_months_runepool_history() -> Result<Vec<RunepoolInterval>, reqwest::Error> {
+pub async fn get_prev_2_months_runepool_history(pool: PgPool) -> Result<(), reqwest::Error> {
     let now = Utc::now();
     let timestamp = now.timestamp();
     let mut from = 1730419200;
@@ -144,26 +199,41 @@ pub async fn get_prev_2_months_runepool_history() -> Result<Vec<RunepoolInterval
 
         final_data.extend(res.intervals);
         let idx = final_data.len() - 1;
-        from = final_data[idx].endTime.parse().expect("Not a valid string")
+        from = final_data[idx]
+            .end_time
+            .parse()
+            .expect("Not a valid string")
     }
 
-    println!(
-        "DONE last timestamp @{} and total entries are {}",
-        final_data[final_data.len() - 1].endTime,
-        final_data.len()
-    );
-    Ok(final_data)
+    let runepool_histories: Vec<Runepool> =
+        final_data.iter().cloned().map(Runepool::from).collect();
+
+    let runepool_history_service = RunePoolService::new(pool.clone());
+    let res = runepool_history_service
+        .save_batch(&runepool_histories)
+        .await;
+
+    match res {
+        Ok(val) => println!("{} rows inserted ✅", val.len()),
+        Err(e) => print!("Error occured {:#?}", e),
+    }
+
+    Ok(())
 }
 
-pub async fn sync_all_data() -> Result<(), reqwest::Error> {
+pub async fn sync_all_data(pool: PgPool) -> Result<(), reqwest::Error> {
     println!("\n\n=========Syncing Price History 🔄===========");
-    get_prev_2_months_price_history().await.unwrap();
+    get_prev_2_months_price_history(pool.clone()).await.unwrap();
     println!("\n\n=========Syncing Earning History 🔄===========");
-    get_prev_2_months_earning_history().await.unwrap();
+    get_prev_2_months_earning_history(pool.clone())
+        .await
+        .unwrap();
     println!("\n\n=========Syncing Swap History 🔄===========");
-    get_prev_2_months_swap_history().await.unwrap();
+    get_prev_2_months_swap_history(pool.clone()).await.unwrap();
     println!("\n\n=========Syncing Runepool History 🔄===========");
-    get_prev_2_months_runepool_history().await.unwrap();
+    get_prev_2_months_runepool_history(pool.clone())
+        .await
+        .unwrap();
 
     println!("\n\n=========All Endpoints Synced Successfully ✅===========");
 

@@ -1,20 +1,28 @@
-mod constant;
-mod model;
 use axum::{routing::get, Router};
+use client::proxy;
+use config::database;
 use dotenv::dotenv;
-use std::env;
+
 mod client;
+mod config;
+mod dtos;
+mod model;
+mod service;
+// mod utils;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     dotenv().ok();
-    let res = client::proxy::sync_all_data().await.unwrap();
+    let pool = config::database::initialize_database().await?;
 
-    let _msg = env::var("MSG");
-    print!("Enum for Min is {:?}", constant::enums::INTERVALS::Min);
+    database::run_migrations(&pool).await?;
+
+    proxy::sync_all_data(pool.clone()).await?;
+
     let app = Router::new().route("/", get(|| async { "Supp ()" }));
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!("Running server at port🌐::{}", 3000);
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
