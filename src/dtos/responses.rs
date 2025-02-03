@@ -78,7 +78,7 @@ pub struct SwapHistoryResponse {
     pub intervals: Vec<SwapInterval>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SwapInterval {
     #[serde(rename = "averageSlip")]
     pub average_slip: String,
@@ -183,7 +183,7 @@ pub struct RunepoolHistoryResponse {
     pub intervals: Vec<RunepoolInterval>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RunepoolInterval {
     pub count: String,
     #[serde(rename = "startTime")]
