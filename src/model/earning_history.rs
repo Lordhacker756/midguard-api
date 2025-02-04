@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::dtos::responses::{EarningInterval, Pool};
 
+use super::earning_history_pool::EarningHistoryPool;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EarningHistory {
     pub id: Option<i32>,
@@ -16,11 +18,29 @@ pub struct EarningHistory {
     pub liquidity_earnings: i64,
     pub avg_node_count: Decimal,
     pub rune_price_usd: Decimal,
-    pub pools: Vec<Pool>,
+    pub pools: Option<Vec<EarningHistoryPool>>,
 }
 
 impl From<EarningInterval> for EarningHistory {
     fn from(value: EarningInterval) -> Self {
+        let earnign_pools = value
+            .pools
+            .iter()
+            .map(|pool| EarningHistoryPool {
+                id: None,
+                earnings_history_id: None,
+                pool: pool.pool.clone(),
+                asset_liquidity_fees: pool.asset_liquidity_fees.parse().unwrap_or_default(),
+                rune_liquidity_fees: pool.rune_liquidity_fees.parse().unwrap_or_default(),
+                total_liquidity_fees_rune: pool
+                    .total_liquidity_fees_rune
+                    .parse()
+                    .unwrap_or_default(),
+                saver_earning: pool.saver_earning.parse().unwrap_or_default(),
+                rewards: pool.rewards.parse().unwrap_or_default(),
+                earnings: pool.earnings.parse().unwrap_or_default(),
+            })
+            .collect();
         Self {
             id: None,
             start_time: Utc
@@ -36,7 +56,7 @@ impl From<EarningInterval> for EarningHistory {
             liquidity_earnings: value.liquidity_earnings.parse().unwrap_or(0),
             liquidity_fees: value.liquidity_fees.parse().unwrap_or(0),
             rune_price_usd: value.rune_price_usd.parse().unwrap_or(Decimal::ZERO),
-            pools: value.pools,
+            pools: Some(earnign_pools),
         }
     }
 }

@@ -1,8 +1,9 @@
-use anyhow::Result;
+use anyhow::{Error, Result};
 use sqlx::PgPool;
 
 use crate::{
     config::database::get_pool,
+    dtos::responses::Pool,
     model::{earning_history::EarningHistory, earning_history_pool::EarningHistoryPool},
 };
 
@@ -13,6 +14,66 @@ pub struct EarningHistoryService<'a> {
 impl<'a> EarningHistoryService<'a> {
     pub fn new() -> Self {
         Self { pool: get_pool() }
+    }
+
+    pub async fn get_all_pools(&self, earning_history_id: i32) -> Result<Vec<EarningHistoryPool>> {
+        let pools = sqlx::query!(
+            r#"
+            SELECT * FROM pool_earnings WHERE earnings_history_id = $1
+        "#,
+            earning_history_id
+        )
+        .fetch_all(self.pool)
+        .await?;
+
+        Ok(pools
+            .into_iter()
+            .map(|record| EarningHistoryPool {
+                id: Some(record.id),
+                earnings_history_id: Some(record.earnings_history_id),
+                pool: record.pool,
+                asset_liquidity_fees: record.asset_liquidity_fees,
+                rune_liquidity_fees: record.rune_liquidity_fees,
+                total_liquidity_fees_rune: record.total_liquidity_fees_rune,
+                saver_earning: record.saver_earning,
+                rewards: record.rewards,
+                earnings: record.earnings,
+            })
+            .collect())
+    }
+
+    pub async fn get_all_earnings_history(&self) -> Result<Vec<EarningHistory>, Error> {
+        let earning_histories = sqlx::query!(
+            r#"
+            SELECT * FROM earnings_history
+            "#
+        )
+        .fetch_all(self.pool)
+        .await?;
+
+        let mut earnings = earning_histories
+            .into_iter()
+            .map(|record| EarningHistory {
+                id: Some(record.id),
+                start_time: record.start_time,
+                end_time: record.end_time,
+                liquidity_fees: record.liquidity_fees,
+                block_rewards: record.block_rewards,
+                earnings: record.earnings,
+                bonding_earnings: record.bonding_earnings,
+                liquidity_earnings: record.liquidity_earnings,
+                avg_node_count: record.avg_node_count,
+                rune_price_usd: record.rune_price_usd,
+                pools: None,
+            })
+            .collect::<Vec<EarningHistory>>();
+
+        for earning in &mut earnings {
+            let pools = self.get_all_pools(earning.id.unwrap()).await?;
+            earning.pools = Some(pools);
+        }
+
+        Ok(earnings)
     }
 
     pub async fn save_pools(
@@ -78,15 +139,9 @@ impl<'a> EarningHistoryService<'a> {
         .fetch_one(self.pool)
         .await?;
 
-        let earning_history_pool: Vec<EarningHistoryPool> = earning_history
-            .pools
-            .iter()
-            .cloned()
-            .map(EarningHistoryPool::from)
-            .collect();
-
-        self.save_pools(earning_history_pool.as_slice(), result.id)
-            .await?;
+        if let Some(pools) = &earning_history.pools {
+            self.save_pools(pools.as_slice(), result.id).await?;
+        }
 
         Ok(result.id)
     }

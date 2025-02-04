@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::dtos::responses::Pool;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EarningHistoryPool {
     pub id: Option<i32>,
     pub earnings_history_id: Option<i32>,
