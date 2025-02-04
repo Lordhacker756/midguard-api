@@ -1,14 +1,14 @@
-use crate::model::rune_pool::Runepool;
+use crate::{config::database::get_pool, model::rune_pool::Runepool};
 use anyhow::Result;
 use sqlx::PgPool;
 
-pub struct RunePoolService {
-    pool: PgPool,
+pub struct RunePoolService<'a> {
+    pool: &'a PgPool,
 }
 
-impl RunePoolService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+impl<'a> RunePoolService<'a> {
+    pub fn new() -> Self {
+        Self { pool: get_pool() }
     }
 
     pub async fn save(&self, rune_pool: &Runepool) -> Result<i32> {
@@ -25,7 +25,7 @@ impl RunePoolService {
             rune_pool.count,
             rune_pool.units
         )
-        .fetch_one(&self.pool)
+        .fetch_one(self.pool)
         .await?;
 
         Ok(result.id)

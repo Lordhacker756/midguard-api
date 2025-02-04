@@ -1,14 +1,14 @@
-use crate::model::swap_history::SwapHistory;
+use crate::{config::database::get_pool, model::swap_history::SwapHistory};
 use anyhow::Result;
 use sqlx::PgPool;
 
-pub struct SwapHistoryService {
-    pool: PgPool,
+pub struct SwapHistoryService<'a> {
+    pool: &'a PgPool,
 }
 
-impl SwapHistoryService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+impl<'a> SwapHistoryService<'a> {
+    pub fn new() -> Self {
+        Self { pool: get_pool() }
     }
 
     pub async fn save(&self, swap_history: &SwapHistory) -> Result<i32> {
@@ -64,7 +64,7 @@ impl SwapHistoryService {
             swap_history.total_fees,
             swap_history.total_volume,
             swap_history.total_volume_usd)
-            .fetch_one(&self.pool)
+            .fetch_one(self.pool)
             .await?;
 
         Ok(result.id)

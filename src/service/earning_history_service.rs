@@ -1,15 +1,18 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
-use crate::model::{earning_history::EarningHistory, earning_history_pool::EarningHistoryPool};
+use crate::{
+    config::database::get_pool,
+    model::{earning_history::EarningHistory, earning_history_pool::EarningHistoryPool},
+};
 
-pub struct EarningHistoryService {
-    pool: PgPool,
+pub struct EarningHistoryService<'a> {
+    pool: &'a PgPool,
 }
 
-impl EarningHistoryService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+impl<'a> EarningHistoryService<'a> {
+    pub fn new() -> Self {
+        Self { pool: get_pool() }
     }
 
     pub async fn save_pools(
@@ -43,7 +46,7 @@ impl EarningHistoryService {
                 pool.rewards,
                 pool.earnings
             )
-            .fetch_one(&self.pool)
+            .fetch_one(self.pool)
             .await?;
 
             inserted.push(record.id);
@@ -72,7 +75,7 @@ impl EarningHistoryService {
             earning_history.avg_node_count,
             earning_history.rune_price_usd
         )
-        .fetch_one(&self.pool)
+        .fetch_one(self.pool)
         .await?;
 
         let earning_history_pool: Vec<EarningHistoryPool> = earning_history

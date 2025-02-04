@@ -1,10 +1,65 @@
+use std::fmt;
+use std::str::FromStr;
+
 use crate::dtos::responses::PriceDepthInterval;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{Date, DateTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Intervals {
+    #[serde(rename = "5min")]
+    FiveMin,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Quarter,
+    Year,
+}
+
+impl FromStr for Intervals {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "5min" => Ok(Intervals::FiveMin),
+            "hour" => Ok(Intervals::Hour),
+            "day" => Ok(Intervals::Day),
+            "week" => Ok(Intervals::Week),
+            "month" => Ok(Intervals::Month),
+            "quarter" => Ok(Intervals::Quarter),
+            "year" => Ok(Intervals::Year),
+            _ => Err(format!("Invalid interval: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for Intervals {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Intervals::FiveMin => write!(f, "5min"),
+            Intervals::Hour => write!(f, "hour"),
+            Intervals::Day => write!(f, "day"),
+            Intervals::Week => write!(f, "week"),
+            Intervals::Month => write!(f, "month"),
+            Intervals::Quarter => write!(f, "quarter"),
+            Intervals::Year => write!(f, "year"),
+        }
+    }
+}
+
+pub struct PriceHistoryParams {
+    interval: Intervals,
+    to: DateTime<Utc>,
+    from: DateTime<Utc>,
+    count: i8,
+}
+
 #[derive(Debug, Deserialize, Serialize, FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct PriceHistory {
     pub id: Option<i32>,
     pub start_time: DateTime<Utc>,
