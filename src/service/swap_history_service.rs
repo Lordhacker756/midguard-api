@@ -1,5 +1,5 @@
 use crate::{config::database::get_pool, model::swap_history::SwapHistory};
-use anyhow::Result;
+use anyhow::{Error, Result};
 use sqlx::PgPool;
 
 pub struct SwapHistoryService<'a> {
@@ -9,6 +9,61 @@ pub struct SwapHistoryService<'a> {
 impl<'a> SwapHistoryService<'a> {
     pub fn new() -> Self {
         Self { pool: get_pool() }
+    }
+
+    pub async fn get_all_swap_history(&self) -> Result<Vec<SwapHistory>, Error> {
+        let result = sqlx::query!(
+            r#"
+        SELECT * from swap_history
+    "#
+        )
+        .fetch_all(self.pool)
+        .await?;
+
+        Ok(result
+            .into_iter()
+            .map(|record| SwapHistory {
+                id: Some(record.id),
+                average_slip: record.average_slip,
+                start_time: record.start_time,
+                end_time: record.end_time,
+                from_trade_average_slip: record.from_trade_average_slip,
+                from_trade_count: record.from_trade_count,
+                from_trade_fees: record.from_trade_fees,
+                from_trade_volume: record.from_trade_volume,
+                from_trade_volume_usd: record.from_trade_volume_usd,
+                rune_price_usd: record.rune_price_usd,
+                synth_mint_average_slip: record.synth_mint_average_slip,
+                synth_mint_count: record.synth_mint_count,
+                synth_mint_fees: record.synth_mint_fees,
+                synth_mint_volume: record.synth_mint_volume,
+                synth_mint_volume_usd: record.synth_mint_volume_usd,
+                synth_redeem_average_slip: record.synth_redeem_average_slip,
+                synth_redeem_count: record.synth_redeem_count,
+                synth_redeem_fees: record.synth_redeem_fees,
+                synth_redeem_volume: record.synth_redeem_volume,
+                synth_redeem_volume_usd: record.synth_redeem_volume_usd,
+                to_asset_average_slip: record.to_asset_average_slip,
+                to_asset_count: record.to_asset_count,
+                to_asset_fees: record.to_asset_fees,
+                to_asset_volume: record.to_asset_volume,
+                to_asset_volume_usd: record.to_asset_volume_usd,
+                to_rune_average_slip: record.to_rune_average_slip,
+                to_rune_count: record.to_rune_count,
+                to_rune_fees: record.to_rune_fees,
+                to_rune_volume: record.to_rune_volume,
+                to_rune_volume_usd: record.to_rune_volume_usd,
+                to_trade_average_slip: record.to_trade_average_slip,
+                to_trade_count: record.to_trade_count,
+                to_trade_fees: record.to_trade_fees,
+                to_trade_volume: record.to_trade_volume,
+                to_trade_volume_usd: record.to_trade_volume_usd,
+                total_count: record.total_count,
+                total_fees: record.total_fees,
+                total_volume: record.total_volume,
+                total_volume_usd: record.total_volume_usd,
+            })
+            .collect())
     }
 
     pub async fn save(&self, swap_history: &SwapHistory) -> Result<i32> {

@@ -7,6 +7,7 @@ use crate::dtos::responses::RunepoolInterval;
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
 
 pub struct Runepool {
+    pub id: Option<i32>,
     pub count: i64,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
@@ -16,6 +17,7 @@ pub struct Runepool {
 impl From<RunepoolInterval> for Runepool {
     fn from(value: RunepoolInterval) -> Self {
         Self {
+            id: None,
             count: value.count.parse().unwrap_or(0),
             start_time: Utc
                 .timestamp_opt(value.start_time.parse().unwrap_or(0), 0)
