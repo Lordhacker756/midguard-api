@@ -3,7 +3,6 @@ use sqlx::PgPool;
 
 use crate::{
     config::database::get_pool,
-    dtos::responses::Pool,
     model::{earning_history::EarningHistory, earning_history_pool::EarningHistoryPool},
 };
 

@@ -2,60 +2,69 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::dtos::responses::PriceDepthInterval;
-use chrono::{Date, DateTime, TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Intervals {
-    #[serde(rename = "5min")]
-    FiveMin,
-    Hour,
-    Day,
-    Week,
-    Month,
-    Quarter,
-    Year,
-}
-
-impl FromStr for Intervals {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "5min" => Ok(Intervals::FiveMin),
-            "hour" => Ok(Intervals::Hour),
-            "day" => Ok(Intervals::Day),
-            "week" => Ok(Intervals::Week),
-            "month" => Ok(Intervals::Month),
-            "quarter" => Ok(Intervals::Quarter),
-            "year" => Ok(Intervals::Year),
-            _ => Err(format!("Invalid interval: {}", s)),
-        }
-    }
-}
-
-impl fmt::Display for Intervals {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Intervals::FiveMin => write!(f, "5min"),
-            Intervals::Hour => write!(f, "hour"),
-            Intervals::Day => write!(f, "day"),
-            Intervals::Week => write!(f, "week"),
-            Intervals::Month => write!(f, "month"),
-            Intervals::Quarter => write!(f, "quarter"),
-            Intervals::Year => write!(f, "year"),
-        }
-    }
-}
-
 pub struct PriceHistoryParams {
-    interval: Intervals,
-    to: DateTime<Utc>,
-    from: DateTime<Utc>,
-    count: i8,
+    pub interval: Option<String>,
+    pub limit: Option<i16>,
+    pub page: Option<i16>,
+    pub order: Option<String>,
+    pub sort_by: Option<String>,
+    pub date_range: Option<String>,
+    pub count: Option<i8>,
+
+    // Asset depth filters
+    pub asset_depth_gt: Option<i64>,
+    pub asset_depth_lt: Option<i64>,
+    pub asset_depth_eq: Option<i64>,
+
+    // Rune depth filters
+    pub rune_depth_gt: Option<i64>,
+    pub rune_depth_lt: Option<i64>,
+    pub rune_depth_eq: Option<i64>,
+
+    // Price filters
+    pub asset_price_gt: Option<Decimal>,
+    pub asset_price_lt: Option<Decimal>,
+    pub asset_price_eq: Option<Decimal>,
+
+    // USD price filters
+    pub asset_price_usd_gt: Option<Decimal>,
+    pub asset_price_usd_lt: Option<Decimal>,
+    pub asset_price_usd_eq: Option<Decimal>,
+
+    // Liquidity units filters
+    pub liquidity_units_gt: Option<i64>,
+    pub liquidity_units_lt: Option<i64>,
+    pub liquidity_units_eq: Option<i64>,
+
+    // Members count filters
+    pub members_count_gt: Option<i64>,
+    pub members_count_lt: Option<i64>,
+    pub members_count_eq: Option<i64>,
+
+    // Synth related filters
+    pub synth_units_gt: Option<i64>,
+    pub synth_units_lt: Option<i64>,
+    pub synth_units_eq: Option<i64>,
+
+    pub synth_supply_gt: Option<i64>,
+    pub synth_supply_lt: Option<i64>,
+    pub synth_supply_eq: Option<i64>,
+
+    // Units filters
+    pub units_gt: Option<i64>,
+    pub units_lt: Option<i64>,
+    pub units_eq: Option<i64>,
+
+    // LUVI filters
+    pub luvi_gt: Option<Decimal>,
+    pub luvi_lt: Option<Decimal>,
+    pub luvi_eq: Option<Decimal>,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]
