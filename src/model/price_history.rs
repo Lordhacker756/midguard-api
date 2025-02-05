@@ -1,6 +1,3 @@
-use std::fmt;
-use std::str::FromStr;
-
 use crate::dtos::responses::PriceDepthInterval;
 use chrono::{DateTime, TimeZone, Utc};
 use rust_decimal::Decimal;

@@ -4,7 +4,6 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use axum::extract::Query;
-use chrono::Timelike;
 use sqlx::{Execute, PgPool, Postgres, QueryBuilder, Row};
 
 pub struct PriceHistoryService<'a> {

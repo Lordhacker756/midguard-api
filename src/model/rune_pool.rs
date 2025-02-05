@@ -14,6 +14,20 @@ pub struct Runepool {
     pub units: i64,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct QueryParams {
+    pub interval: Option<String>,
+    pub sort_by: Option<String>,
+    pub order: Option<String>,
+    pub page: Option<i32>,
+    pub limit: Option<i32>,
+    pub count: Option<i32>,
+    pub date_range: Option<String>,
+    pub units_gt: Option<i64>,
+    pub units_lt: Option<i64>,
+    pub units_eq: Option<i64>,
+}
+
 impl From<RunepoolInterval> for Runepool {
     fn from(value: RunepoolInterval) -> Self {
         Self {
