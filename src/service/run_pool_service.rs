@@ -21,38 +21,39 @@ impl<'a> RunePoolService<'a> {
     ) -> Result<Vec<Runepool>, Error> {
         let mut qb = QueryBuilder::<Postgres>::new("SELECT * FROM rune_pool_history WHERE true");
 
-        // TODO
         // Interval filter
         if let Some(interval) = &params.interval {
             let interval_trunc = match interval.as_str() {
-        "5min" => "date_trunc('minute', start_time) + INTERVAL '5 minutes' * (EXTRACT(MINUTE FROM start_time)::int / 5)",
-        "hour" => "date_trunc('hour', start_time)",
-        "day" => "date_trunc('day', start_time)",
-        "week" => "date_trunc('week', start_time)",
-        "month" => "date_trunc('month', start_time)",
-        "quarter" => "date_trunc('quarter', start_time)",
-        "year" => "date_trunc('year', start_time)",
-        _ => "date_trunc('hour', start_time)", // Default to hourly
-    };
+                "5min" => "date_trunc('minute', start_time) + INTERVAL '5 minutes' * (EXTRACT(MINUTE FROM start_time)::int / 5)",
+                "hour" => "date_trunc('hour', start_time)",
+                "day" => "date_trunc('day', start_time)",
+                "week" => "date_trunc('week', start_time)",
+                "month" => "date_trunc('month', start_time)",
+                "quarter" => "date_trunc('quarter', start_time)",
+                "year" => "date_trunc('year', start_time)",
+                _ => "date_trunc('hour', start_time)", // Default to hourly
+            };
 
             qb.push(" AND start_time IN (");
             qb.push("SELECT DISTINCT ON (")
                 .push(interval_trunc)
-                .push(") start_time FROM rune_pool_history");
-            qb.push(" WHERE true"); // Subquery filtering
+                .push(") start_time FROM rune_pool_history WHERE true");
             qb.push(")");
         }
 
+        // Date range filter
         if let Some(date_range) = &params.date_range {
             let dates: Vec<&str> = date_range.split(',').collect();
-            qb.push(" AND start_time >= ")
-                .push("TO_TIMESTAMP(")
-                .push_bind(dates[0])
-                .push(", 'YYYY-MM-DD')")
-                .push(" AND end_time <= ")
-                .push("TO_TIMESTAMP(")
-                .push_bind(dates[1])
-                .push(", 'YYYY-MM-DD')");
+            if dates.len() == 2 {
+                qb.push(" AND start_time >= ")
+                    .push("TO_TIMESTAMP(")
+                    .push_bind(dates[0])
+                    .push(", 'YYYY-MM-DD')")
+                    .push(" AND end_time <= ")
+                    .push("TO_TIMESTAMP(")
+                    .push_bind(dates[1])
+                    .push(", 'YYYY-MM-DD')");
+            }
         }
 
         // Units filters
@@ -71,39 +72,31 @@ impl<'a> RunePoolService<'a> {
             qb.push(" ORDER BY ").push(sort_by);
 
             if let Some(order) = &params.order {
-                qb.push(" ").push(order.to_lowercase());
+                match order.to_lowercase().as_str() {
+                    "asc" => qb.push(" ASC"),
+                    "desc" => qb.push(" DESC"),
+                    _ => qb.push(" ASC"), // default to ascending
+                };
             }
         }
 
-        // Count limit
+        // Pagination and limits
         if let Some(count) = params.count {
             qb.push(" LIMIT ").push_bind(count);
-        }
-
-        // Pagination
-        if let Some(limit) = params.limit {
+        } else if let Some(limit) = params.limit {
             qb.push(" LIMIT ").push_bind(limit);
-        }
-        if let Some(page) = params.page {
-            let offset = page as i64 * params.limit.unwrap_or(10) as i64;
-            qb.push(" OFFSET ").push_bind(offset);
+
+            if let Some(page) = params.page {
+                let offset = (page as i64).saturating_sub(1) * limit as i64;
+                qb.push(" OFFSET ").push_bind(offset);
+            }
         }
 
-        // Execute the query
-        let query = qb.build();
+        let query = qb.build_query_as::<Runepool>();
         println!("SQL Query: {}", query.sql());
         let result = query.fetch_all(self.pool).await?;
 
-        Ok(result
-            .into_iter()
-            .map(|record| Runepool {
-                id: record.get("id"),
-                start_time: record.get("start_time"),
-                end_time: record.get("end_time"),
-                count: record.get("count"),
-                units: record.get("units"),
-            })
-            .collect())
+        Ok(result)
     }
 
     pub async fn save(&self, rune_pool: &Runepool) -> Result<i32> {
