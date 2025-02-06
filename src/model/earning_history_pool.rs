@@ -2,6 +2,41 @@ use serde::{Deserialize, Serialize};
 
 use crate::dtos::responses::Pool;
 
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct EarningPoolQueryParams {
+    pub pool_eq: Option<String>,
+
+    // Asset liquidity Fee
+    pub asset_liquitdity_fees_lt: Option<i32>,
+    pub asset_liquitdity_fees_eq: Option<i32>,
+    pub asset_liquitdity_fees_gt: Option<i32>,
+
+    // Rune liquidity Fee
+    pub rune_liquitdity_fees_lt: Option<i32>,
+    pub rune_liquitdity_fees_eq: Option<i32>,
+    pub rune_liquitdity_fees_gt: Option<i32>,
+
+    // Total liquidity Fee
+    pub total_liquitdity_fees_rune_lt: Option<i32>,
+    pub total_liquitdity_fees_rune_eq: Option<i32>,
+    pub total_liquitdity_fees_rune_gt: Option<i32>,
+
+    // Saver earning
+    pub saver_earning_lt: Option<i32>,
+    pub saver_earning_eq: Option<i32>,
+    pub saver_earning_gt: Option<i32>,
+
+    // Rewards
+    pub rewards_lt: Option<i32>,
+    pub rewards_eq: Option<i32>,
+    pub rewards_gt: Option<i32>,
+
+    // Earnings
+    pub earnings_lt: Option<i32>,
+    pub earnings_eq: Option<i32>,
+    pub earnings_gt: Option<i32>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EarningHistoryPool {
     pub id: Option<i32>,

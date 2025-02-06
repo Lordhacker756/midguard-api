@@ -20,8 +20,6 @@ impl<'a> PriceHistoryService<'a> {
         params: Query<PriceHistoryParams>,
     ) -> Result<Vec<PriceHistory>, Error> {
         let mut qb = QueryBuilder::<Postgres>::new("SELECT * FROM depth_price_history WHERE true");
-
-        // TODO
         // Interval filter
         if let Some(interval) = &params.interval {
             let interval_trunc = match interval.as_str() {
