@@ -1,14 +1,382 @@
-use crate::model::swap_history::SwapHistory;
-use anyhow::Result;
-use sqlx::PgPool;
+use crate::{
+    config::database::get_pool,
+    model::swap_history::{QueryParams, SwapHistory},
+};
+use anyhow::{Error, Result};
+use axum::extract::Query;
+use sqlx::{Execute, PgPool, Postgres, QueryBuilder, Row};
 
-pub struct SwapHistoryService {
-    pool: PgPool,
+pub struct SwapHistoryService<'a> {
+    pool: &'a PgPool,
 }
 
-impl SwapHistoryService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+impl<'a> SwapHistoryService<'a> {
+    pub fn new() -> Self {
+        Self { pool: get_pool() }
+    }
+
+    // Fix the generic type constraints for the comparison filters method
+    fn add_comparison_filters<'q, T>(
+        &self,
+        qb: &mut QueryBuilder<'q, Postgres>,
+        field: &str,
+        gt: Option<T>,
+        lt: Option<T>,
+        eq: Option<T>,
+    ) where
+        T: sqlx::Encode<'q, Postgres> + sqlx::Type<Postgres> + std::fmt::Display + Send + 'q,
+    {
+        if let Some(val) = gt {
+            qb.push(format!(" AND {} > ", field)).push_bind(val);
+        }
+        if let Some(val) = lt {
+            qb.push(format!(" AND {} < ", field)).push_bind(val);
+        }
+        if let Some(val) = eq {
+            qb.push(format!(" AND {} = ", field)).push_bind(val);
+        }
+    }
+
+    pub async fn get_all_swap_history(
+        &self,
+        params: Query<QueryParams>,
+    ) -> Result<Vec<SwapHistory>, Error> {
+        let mut qb = QueryBuilder::<Postgres>::new("SELECT * FROM swap_history WHERE true");
+
+        // Interval filter
+        if let Some(interval) = &params.interval {
+            let interval_trunc = match interval.as_str() {
+                "5min" => "date_trunc('minute', start_time) + INTERVAL '5 minutes' * (EXTRACT(MINUTE FROM start_time)::int / 5)",
+                "hour" => "date_trunc('hour', start_time)",
+                "day" => "date_trunc('day', start_time)",
+                "week" => "date_trunc('week', start_time)",
+                "month" => "date_trunc('month', start_time)",
+                "quarter" => "date_trunc('quarter', start_time)",
+                "year" => "date_trunc('year', start_time)",
+                _ => "date_trunc('hour', start_time)",
+            };
+
+            qb.push(" AND start_time IN (");
+            qb.push("SELECT DISTINCT ON (")
+                .push(interval_trunc)
+                .push(") start_time FROM swap_history WHERE true");
+            qb.push(")");
+        }
+
+        // Date range filter
+        if let Some(date_range) = &params.date_range {
+            let dates: Vec<&str> = date_range.split(',').collect();
+            qb.push(" AND start_time >= ")
+                .push("TO_TIMESTAMP(")
+                .push_bind(dates[0])
+                .push(", 'YYYY-MM-DD')")
+                .push(" AND end_time <= ")
+                .push("TO_TIMESTAMP(")
+                .push_bind(dates[1])
+                .push(", 'YYYY-MM-DD')");
+        }
+
+        // Add all comparison filters
+        self.add_comparison_filters(
+            &mut qb,
+            "from_trade_average_slip",
+            params.from_trade_average_slip_gt,
+            params.from_trade_average_slip_lt,
+            params.from_trade_average_slip_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "from_trade_count",
+            params.from_trade_count_gt,
+            params.from_trade_count_lt,
+            params.from_trade_count_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "from_trade_fees",
+            params.from_trade_fees_gt,
+            params.from_trade_fees_lt,
+            params.from_trade_fees_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "from_trade_volume",
+            params.from_trade_volume_gt,
+            params.from_trade_volume_lt,
+            params.from_trade_volume_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "from_trade_volume_usd",
+            params.from_trade_volume_usd_gt,
+            params.from_trade_volume_usd_lt,
+            params.from_trade_volume_usd_eq,
+        );
+
+        // Synth mint filters
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_mint_average_slip",
+            params.synth_mint_average_slip_gt,
+            params.synth_mint_average_slip_lt,
+            params.synth_mint_average_slip_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_mint_count",
+            params.synth_mint_count_gt,
+            params.synth_mint_count_lt,
+            params.synth_mint_count_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_mint_fees",
+            params.synth_mint_fees_gt,
+            params.synth_mint_fees_lt,
+            params.synth_mint_fees_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_mint_volume",
+            params.synth_mint_volume_gt,
+            params.synth_mint_volume_lt,
+            params.synth_mint_volume_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_mint_volume_usd",
+            params.synth_mint_volume_usd_gt,
+            params.synth_mint_volume_usd_lt,
+            params.synth_mint_volume_usd_eq,
+        );
+
+        // Synth redeem filters
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_redeem_average_slip",
+            params.synth_redeem_average_slip_gt,
+            params.synth_redeem_average_slip_lt,
+            params.synth_redeem_average_slip_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_redeem_count",
+            params.synth_redeem_count_gt,
+            params.synth_redeem_count_lt,
+            params.synth_redeem_count_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_redeem_fees",
+            params.synth_redeem_fees_gt,
+            params.synth_redeem_fees_lt,
+            params.synth_redeem_fees_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_redeem_volume",
+            params.synth_redeem_volume_gt,
+            params.synth_redeem_volume_lt,
+            params.synth_redeem_volume_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "synth_redeem_volume_usd",
+            params.synth_redeem_volume_usd_gt,
+            params.synth_redeem_volume_usd_lt,
+            params.synth_redeem_volume_usd_eq,
+        );
+
+        // To asset filters
+        self.add_comparison_filters(
+            &mut qb,
+            "to_asset_average_slip",
+            params.to_asset_average_slip_gt,
+            params.to_asset_average_slip_lt,
+            params.to_asset_average_slip_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_asset_count",
+            params.to_asset_count_gt,
+            params.to_asset_count_lt,
+            params.to_asset_count_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_asset_fees",
+            params.to_asset_fees_gt,
+            params.to_asset_fees_lt,
+            params.to_asset_fees_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_asset_volume",
+            params.to_asset_volume_gt,
+            params.to_asset_volume_lt,
+            params.to_asset_volume_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_asset_volume_usd",
+            params.to_asset_volume_usd_gt,
+            params.to_asset_volume_usd_lt,
+            params.to_asset_volume_usd_eq,
+        );
+
+        // To rune filters
+        self.add_comparison_filters(
+            &mut qb,
+            "to_rune_average_slip",
+            params.to_rune_average_slip_gt,
+            params.to_rune_average_slip_lt,
+            params.to_rune_average_slip_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_rune_count",
+            params.to_rune_count_gt,
+            params.to_rune_count_lt,
+            params.to_rune_count_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_rune_fees",
+            params.to_rune_fees_gt,
+            params.to_rune_fees_lt,
+            params.to_rune_fees_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_rune_volume",
+            params.to_rune_volume_gt,
+            params.to_rune_volume_lt,
+            params.to_rune_volume_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_rune_volume_usd",
+            params.to_rune_volume_usd_gt,
+            params.to_rune_volume_usd_lt,
+            params.to_rune_volume_usd_eq,
+        );
+
+        // To trade filters
+        self.add_comparison_filters(
+            &mut qb,
+            "to_trade_average_slip",
+            params.to_trade_average_slip_gt,
+            params.to_trade_average_slip_lt,
+            params.to_trade_average_slip_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_trade_count",
+            params.to_trade_count_gt,
+            params.to_trade_count_lt,
+            params.to_trade_count_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_trade_fees",
+            params.to_trade_fees_gt,
+            params.to_trade_fees_lt,
+            params.to_trade_fees_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_trade_volume",
+            params.to_trade_volume_gt,
+            params.to_trade_volume_lt,
+            params.to_trade_volume_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "to_trade_volume_usd",
+            params.to_trade_volume_usd_gt,
+            params.to_trade_volume_usd_lt,
+            params.to_trade_volume_usd_eq,
+        );
+
+        // Total metrics filters
+        self.add_comparison_filters(
+            &mut qb,
+            "total_count",
+            params.total_count_gt,
+            params.total_count_lt,
+            params.total_count_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "total_fees",
+            params.total_fees_gt,
+            params.total_fees_lt,
+            params.total_fees_eq,
+        );
+
+        self.add_comparison_filters(
+            &mut qb,
+            "total_volume",
+            params.total_volume_gt,
+            params.total_volume_lt,
+            params.total_volume_eq,
+        );
+
+        // Sorting
+        if let Some(sort_by) = &params.sort_by {
+            qb.push(" ORDER BY ").push(sort_by);
+
+            if let Some(order) = &params.order {
+                match order.to_lowercase().as_str() {
+                    "asc" => qb.push(" ASC"),
+                    "desc" => qb.push(" DESC"),
+                    _ => qb.push(" ASC"),
+                };
+            }
+        }
+
+        // Pagination
+        if let Some(count) = params.count {
+            qb.push(" LIMIT ").push_bind(count);
+        } else if let Some(limit) = params.limit {
+            qb.push(" LIMIT ").push_bind(limit);
+
+            if let Some(page) = params.page {
+                let offset = (page as i64).saturating_sub(1) * limit as i64;
+                qb.push(" OFFSET ").push_bind(offset);
+            }
+        }
+
+        let query = qb.build_query_as::<SwapHistory>();
+        println!("SQL Query: {}", query.sql());
+        let result = query.fetch_all(self.pool).await?;
+
+        Ok(result)
     }
 
     pub async fn save(&self, swap_history: &SwapHistory) -> Result<i32> {
@@ -64,7 +432,7 @@ impl SwapHistoryService {
             swap_history.total_fees,
             swap_history.total_volume,
             swap_history.total_volume_usd)
-            .fetch_one(&self.pool)
+            .fetch_one(self.pool)
             .await?;
 
         Ok(result.id)

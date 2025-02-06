@@ -7,14 +7,7 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="877f6a34-8e58-49d0-a292-d9aff48df258" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/price_history.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/price_history.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/rune_pool.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/rune_pool.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/service/earning_history_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/service/earning_history_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/service/mod.rs" afterDir="false" />
-    </list>
+    <list default="true" id="877f6a34-8e58-49d0-a292-d9aff48df258" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -34,10 +27,10 @@
   <component name="MacroExpansionManager">
     <option name="directoryName" value="3NqFMfID" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "customColor": "",
-  "associatedIndex": 4
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 4
+}</component>
   <component name="ProjectId" id="2sU17Jr9TglqdadNbODiso24Db8" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -48,7 +41,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
-    "git-widget-placeholder": "feat/db-setup",
+    "git-widget-placeholder": "feat/crud-ops",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -118,6 +111,7 @@
       <option name="presentableId" value="Default" />
       <updated>1738495172213</updated>
       <workItem from="1738495173774" duration="3358000" />
+      <workItem from="1738667619895" duration="664000" />
     </task>
     <servers />
   </component>
