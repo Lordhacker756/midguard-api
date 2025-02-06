@@ -6,7 +6,7 @@ use crate::{
     config::database::get_pool,
     model::{
         earning_history::{EarningHistory, QueryParams},
-        earning_history_pool::{EarningHistoryPool, EarningPoolQueryParams},
+        earning_history_pool::EarningHistoryPool,
     },
 };
 
@@ -17,6 +17,16 @@ pub struct EarningHistoryService<'a> {
 impl<'a> EarningHistoryService<'a> {
     pub fn new() -> Self {
         Self { pool: get_pool() }
+    }
+
+    pub async fn get_last_update_timestamp(&self) -> Result<i64, Error> {
+        let record = sqlx::query!(
+            "SELECT start_time FROM earnings_history ORDER BY start_time DESC LIMIT 1"
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(record.start_time.timestamp())
     }
 
     pub async fn get_all_pools(
@@ -315,7 +325,7 @@ impl<'a> EarningHistoryService<'a> {
                 pool.rune_liquidity_fees,
                 pool.total_liquidity_fees_rune,
                 pool.saver_earning,
-                pool.rewards,
+                pool.rewards.try_into().unwrap_or(0),
                 pool.earnings
             )
             .fetch_one(self.pool)
@@ -357,15 +367,111 @@ impl<'a> EarningHistoryService<'a> {
         Ok(result.id)
     }
 
-    pub async fn save_batch(self, earning_histories: &[EarningHistory]) -> Result<Vec<i32>> {
-        let mut ids = Vec::<i32>::with_capacity(earning_histories.len());
+    pub async fn save_batch(&self, earning_histories: &[EarningHistory]) -> Result<Vec<i32>> {
+        println!(
+            "📦 Batch saving {} earning history records",
+            earning_histories.len()
+        );
 
-        for earning_history in earning_histories {
-            // We have a list of pools (DTO), we'd need to convert it individually to a list of EarningHistoryPool model, then send that &[EarningHistoryPool] to the save method
-            let id = self.save(earning_history).await?;
-            ids.push(id);
+        let mut tx = self.pool.begin().await?;
+
+        // First insert main records
+        let copy = String::from(
+            "COPY earnings_history (start_time, end_time, liquidity_fees, block_rewards, \
+         earnings, bonding_earnings, liquidity_earnings, avg_node_count, rune_price_usd) \
+         FROM STDIN WITH (FORMAT text, DELIMITER '\t')",
+        );
+
+        let mut writer = tx.copy_in_raw(&copy).await?;
+
+        // Process main records in chunks of 5000
+        for (chunk_idx, chunk) in earning_histories.chunks(5000).enumerate() {
+            println!("Processing chunk {} of earning histories", chunk_idx + 1);
+            let mut batch_data = String::with_capacity(chunk.len() * 256);
+
+            for earning in chunk {
+                batch_data.push_str(&format!(
+                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                    earning.start_time.format("%Y-%m-%d %H:%M:%S UTC"),
+                    earning.end_time.format("%Y-%m-%d %H:%M:%S UTC"),
+                    earning.liquidity_fees,
+                    earning.block_rewards,
+                    earning.earnings,
+                    earning.bonding_earnings,
+                    earning.liquidity_earnings,
+                    earning.avg_node_count,
+                    earning.rune_price_usd
+                ));
+            }
+
+            writer.send(batch_data.as_bytes()).await?;
         }
 
+        writer.finish().await?;
+
+        // Get inserted IDs
+        let ids = sqlx::query_as::<_, (i32,)>(
+            "SELECT id FROM earnings_history ORDER BY id DESC LIMIT $1",
+        )
+        .bind(earning_histories.len() as i32)
+        .fetch_all(&mut *tx)
+        .await?
+        .into_iter()
+        .map(|(id,)| id)
+        .collect::<Vec<i32>>();
+
+        // Now handle pools
+        println!("Batching and saving pools 📦");
+        let mut all_pools = Vec::new();
+        for (idx, earning) in earning_histories.iter().enumerate() {
+            if let Some(pools) = &earning.pools {
+                for pool in pools {
+                    all_pools.push((ids[idx], pool));
+                }
+            }
+        }
+
+        if !all_pools.is_empty() {
+            println!("Processing {} pool records", all_pools.len());
+
+            let copy_pools = String::from(
+                "COPY pool_earnings (earnings_history_id, pool, asset_liquidity_fees, \
+             rune_liquidity_fees, total_liquidity_fees_rune, saver_earning, rewards, \
+             earnings) FROM STDIN WITH (FORMAT text, DELIMITER '\t')",
+            );
+
+            let mut pool_writer = tx.copy_in_raw(&copy_pools).await?;
+
+            // Process pools in chunks
+            for (chunk_idx, chunk) in all_pools.chunks(5000).enumerate() {
+                println!("Processing chunk {} of pools", chunk_idx + 1);
+                let mut pool_data = String::with_capacity(chunk.len() * 256);
+
+                for (earning_id, pool) in chunk {
+                    pool_data.push_str(&format!(
+                        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                        earning_id,
+                        pool.pool,
+                        pool.asset_liquidity_fees,
+                        pool.rune_liquidity_fees,
+                        pool.total_liquidity_fees_rune,
+                        pool.saver_earning,
+                        pool.rewards,
+                        pool.earnings
+                    ));
+                }
+
+                pool_writer.send(pool_data.as_bytes()).await?;
+            }
+
+            pool_writer.finish().await?;
+        }
+
+        tx.commit().await?;
+        println!(
+            "✅ Successfully saved {} earning histories with their pools",
+            earning_histories.len()
+        );
         Ok(ids)
     }
 }

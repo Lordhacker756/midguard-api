@@ -2,9 +2,9 @@ use chrono::{DateTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::dtos::responses::{EarningInterval, Pool};
+use crate::dtos::responses::EarningInterval;
 
-use super::earning_history_pool::{EarningHistoryPool, EarningPoolQueryParams};
+use super::earning_history_pool::EarningHistoryPool;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QueryParams {

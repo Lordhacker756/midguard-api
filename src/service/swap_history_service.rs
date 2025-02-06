@@ -4,7 +4,8 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use axum::extract::Query;
-use sqlx::{Execute, PgPool, Postgres, QueryBuilder, Row};
+use rust_decimal::Decimal;
+use sqlx::{Execute, PgPool, Postgres, QueryBuilder};
 
 pub struct SwapHistoryService<'a> {
     pool: &'a PgPool,
@@ -13,6 +14,15 @@ pub struct SwapHistoryService<'a> {
 impl<'a> SwapHistoryService<'a> {
     pub fn new() -> Self {
         Self { pool: get_pool() }
+    }
+
+    pub async fn get_last_update_timestamp(&self) -> Result<i64, Error> {
+        let record =
+            sqlx::query!("SELECT start_time FROM swap_history ORDER BY start_time DESC LIMIT 1")
+                .fetch_one(self.pool)
+                .await?;
+
+        Ok(record.start_time.timestamp())
     }
 
     // Fix the generic type constraints for the comparison filters method
@@ -438,14 +448,84 @@ impl<'a> SwapHistoryService<'a> {
         Ok(result.id)
     }
 
-    pub async fn save_batch(&self, swap_historys: &[SwapHistory]) -> Result<Vec<i32>> {
-        let mut ids = Vec::with_capacity(swap_historys.len());
+    pub async fn save_batch(&self, swap_histories: &[SwapHistory]) -> Result<Vec<i32>> {
+        println!(
+            "📦 Batch saving {} swap history records",
+            swap_histories.len()
+        );
+        const BATCH_SIZE: usize = 1000;
+        let mut results = Vec::new();
 
-        for swap_history in swap_historys {
-            let id = self.save(swap_history).await?;
-            ids.push(id);
+        for chunk in swap_histories.chunks(BATCH_SIZE) {
+            let mut tx = self.pool.begin().await?;
+
+            for record in chunk {
+                let id = sqlx::query!(
+                    r#"
+                    INSERT INTO swap_history (
+                        average_slip, end_time, from_trade_average_slip, from_trade_count,
+                        from_trade_fees, from_trade_volume, from_trade_volume_usd, rune_price_usd,
+                        start_time, synth_mint_average_slip, synth_mint_count, synth_mint_fees,
+                        synth_mint_volume, synth_mint_volume_usd, synth_redeem_average_slip,
+                        synth_redeem_count, synth_redeem_fees, synth_redeem_volume,
+                        synth_redeem_volume_usd, to_asset_average_slip, to_asset_count,
+                        to_asset_fees, to_asset_volume, to_asset_volume_usd, to_rune_average_slip,
+                        to_rune_count, to_rune_fees, to_rune_volume, to_rune_volume_usd,
+                        to_trade_average_slip, to_trade_count, to_trade_fees, to_trade_volume,
+                        to_trade_volume_usd, total_count, total_fees, total_volume, total_volume_usd
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
+                            $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, 
+                            $29, $30, $31, $32, $33, $34, $35, $36, $37, $38)
+                    RETURNING id"#,
+                    record.average_slip,
+                    record.end_time,
+                    record.from_trade_average_slip,
+                    record.from_trade_count,
+                    record.from_trade_fees,
+                    record.from_trade_volume,
+                    record.from_trade_volume_usd,
+                    record.rune_price_usd,
+                    record.start_time,
+                    record.synth_mint_average_slip,
+                    record.synth_mint_count,
+                    record.synth_mint_fees,
+                    record.synth_mint_volume,
+                    record.synth_mint_volume_usd,
+                    record.synth_redeem_average_slip,
+                    record.synth_redeem_count,
+                    record.synth_redeem_fees,
+                    record.synth_redeem_volume,
+                    record.synth_redeem_volume_usd,
+                    record.to_asset_average_slip,
+                    record.to_asset_count,
+                    record.to_asset_fees,
+                    record.to_asset_volume,
+                    record.to_asset_volume_usd,
+                    record.to_rune_average_slip,
+                    record.to_rune_count,
+                    record.to_rune_fees,
+                    record.to_rune_volume,
+                    record.to_rune_volume_usd,
+                    record.to_trade_average_slip,
+                    record.to_trade_count,
+                    record.to_trade_fees,
+                    record.to_trade_volume,
+                    record.to_trade_volume_usd,
+                    record.total_count,
+                    record.total_fees,
+                    record.total_volume,
+                    record.total_volume_usd
+                )
+                .fetch_one(&mut *tx)
+                .await?;
+
+                results.push(id.id);
+            }
+
+            tx.commit().await?;
         }
 
-        Ok(ids)
+        Ok(results)
     }
 }

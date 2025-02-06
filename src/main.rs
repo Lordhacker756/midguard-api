@@ -1,4 +1,5 @@
 use axum::{routing::get, Router};
+use client::proxy;
 use config::database;
 use dotenv::dotenv;
 use routes::{
@@ -8,6 +9,7 @@ use routes::{
 
 mod client;
 mod config;
+mod cronjobs;
 mod dtos;
 mod model;
 mod routes;
@@ -17,10 +19,11 @@ mod service;
 async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     config::database::initialize_database().await?;
-
     database::run_migrations().await?;
-
-    // proxy::sync_all_data(pool.clone()).await?;
+    proxy::sync_all_data().await;
+    tokio::spawn(async move {
+        cronjobs::jobs::run().await;
+    });
 
     let app = Router::new()
         .route("/depth-history", get(get_price_depth_history))
