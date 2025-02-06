@@ -4,7 +4,6 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use axum::extract::Query;
-use rust_decimal::Decimal;
 use sqlx::{Execute, PgPool, Postgres, QueryBuilder};
 
 pub struct SwapHistoryService<'a> {

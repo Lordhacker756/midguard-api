@@ -22,8 +22,8 @@ pub async fn run() {
         let res = proxy::sync_all_data().await;
 
         match res {
-            Ok(res) => println!("Data synced successfully ✅"),
-            Err(err) => println!("Failed ❌"),
+            Ok(_res) => println!("Data synced successfully ✅"),
+            Err(_err) => println!("Failed ❌"),
         }
     }
 }

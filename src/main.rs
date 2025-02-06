@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     config::database::initialize_database().await?;
     database::run_migrations().await?;
-    proxy::sync_all_data().await;
+    let _ = proxy::sync_all_data().await;
     tokio::spawn(async move {
         cronjobs::jobs::run().await;
     });
