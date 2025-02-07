@@ -31,7 +31,11 @@ async fn main() -> Result<(), AppError> {
         .map_err(|e| AppError::new(e.to_string()).with_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
     tokio::spawn(async move {
-        cronjobs::jobs::run().await;
+        if let Err(e) = cronjobs::jobs::run().await.map_err(|e| {
+            AppError::new(e.to_string()).with_status(StatusCode::INTERNAL_SERVER_ERROR)
+        }) {
+            eprintln!("Cronjob error: {}", e);
+        }
     });
 
     let app = Router::new()
