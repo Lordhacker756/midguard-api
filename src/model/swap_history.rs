@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
@@ -177,12 +177,12 @@ impl From<SwapInterval> for SwapHistory {
         Self {
             id: None,
             average_slip: value.average_slip.parse::<Decimal>().unwrap_or_default(),
-            start_time: DateTime::parse_from_rfc3339(&value.start_time)
-                .unwrap_or_default()
-                .with_timezone(&Utc),
-            end_time: DateTime::parse_from_rfc3339(&value.end_time)
-                .unwrap_or_default()
-                .with_timezone(&Utc),
+            start_time: Utc
+                .timestamp_opt(value.start_time.parse().unwrap_or(0), 0)
+                .unwrap(),
+            end_time: Utc
+                .timestamp_opt(value.end_time.parse().unwrap_or(0), 0)
+                .unwrap(),
             from_trade_average_slip: value.from_trade_average_slip.parse().unwrap_or_default(),
             from_trade_count: value.from_trade_count.parse().unwrap_or(0),
             from_trade_fees: value.from_trade_fees.parse().unwrap_or(0),

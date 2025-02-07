@@ -6,7 +6,10 @@ use crate::{
 
 #[debug_handler]
 pub async fn get_all_earnings_history(params: Query<QueryParams>) -> impl IntoResponse {
-    let earning_history_service = EarningHistoryService::new();
+    let earning_history_service = match EarningHistoryService::new() {
+        Ok(service) => service,
+        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+    };
 
     match earning_history_service
         .get_all_earnings_history(params)

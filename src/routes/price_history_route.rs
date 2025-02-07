@@ -6,7 +6,10 @@ use crate::{
 
 #[debug_handler]
 pub async fn get_price_depth_history(params: Query<PriceHistoryParams>) -> impl IntoResponse {
-    let price_history_service = PriceHistoryService::new();
+    let price_history_service = match PriceHistoryService::new() {
+        Ok(service) => service,
+        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+    };
 
     match price_history_service.get_all_price_history(params).await {
         Ok(res) => Ok((StatusCode::OK, Json(res))),
