@@ -7,7 +7,6 @@ pub async fn get_all_runepools(params: Query<QueryParams>) -> impl IntoResponse 
         Ok(service) => service,
         Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
     };
-    RunePoolService::new();
 
     match rune_service.get_all_runepools(params).await {
         Ok(res) => Ok((StatusCode::OK, Json(res))),

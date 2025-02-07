@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use axum::http::StatusCode;
-use sqlx::{PgPool, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 use std::env;
 use std::time::Duration;
 
@@ -15,14 +15,12 @@ pub async fn initialize_database() -> Result<Pool<Postgres>, AppError> {
             .with_status(StatusCode::INTERNAL_SERVER_ERROR)
     })?;
 
-    // let pool = sqlx::postgres::PgPoolOptions::new()
-    //     .max_connections(5)
-    //     .acquire_timeout(Duration::from_secs(3))
-    //     .connect(&url)
-    //     .await
-    //     .map_err(|e| AppError::new(format!("Failed to connect to database: {}", e)))?;
-
-    let pool = PgPool::connect(&url).await?;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&url)
+        .await
+        .map_err(|e| AppError::new(format!("Failed to connect to database: {}", e)))?;
 
     DB_POOL.set(pool.clone()).map_err(|_| {
         AppError::new("Failed to set database pool").with_status(StatusCode::INTERNAL_SERVER_ERROR)

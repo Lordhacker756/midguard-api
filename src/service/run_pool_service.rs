@@ -3,8 +3,8 @@ use crate::{
     error::AppError,
     model::rune_pool::{QueryParams, Runepool},
 };
-use axum::{extract::Query, http::StatusCode};
-use sqlx::{Execute, PgPool, Postgres, QueryBuilder};
+use axum::extract::Query;
+use sqlx::{Execute, PgPool, Postgres, QueryBuilder, Row};
 
 pub struct RunePoolService<'a> {
     pool: &'a PgPool,
@@ -21,14 +21,16 @@ impl<'a> RunePoolService<'a> {
     }
 
     pub async fn get_last_update_timestamp(&self) -> Result<i64, AppError> {
-        let record = sqlx::query!(
-            "SELECT start_time FROM rune_pool_history ORDER BY start_time DESC LIMIT 1"
+        let record = sqlx::query(
+            "SELECT start_time FROM rune_pool_history ORDER BY start_time DESC LIMIT 1",
         )
         .fetch_one(self.pool)
         .await
         .map_err(|e| AppError::new(format!("Failed to get last timestamp: {}", e)))?;
 
-        Ok(record.start_time.timestamp())
+        Ok(record
+            .get::<chrono::DateTime<chrono::Utc>, _>("start_time")
+            .timestamp())
     }
 
     pub async fn get_all_runepools(
@@ -122,7 +124,7 @@ impl<'a> RunePoolService<'a> {
 
     pub async fn save(&self, rune_pool: &Runepool) -> Result<i32, AppError> {
         println!("💾 Saving single rune pool record");
-        let result = sqlx::query!(
+        let result = sqlx::query(
             r#"
                 INSERT INTO rune_pool_history (
                     start_time, end_time, count, units
@@ -130,17 +132,18 @@ impl<'a> RunePoolService<'a> {
                 VALUES ($1, $2, $3, $4)
                 RETURNING id
             "#,
-            rune_pool.start_time,
-            rune_pool.end_time,
-            rune_pool.count,
-            rune_pool.units
         )
+        .bind(&rune_pool.start_time)
+        .bind(&rune_pool.end_time)
+        .bind(&rune_pool.count)
+        .bind(&rune_pool.units)
         .fetch_one(self.pool)
         .await
         .map_err(|e| AppError::new(format!("Failed to save rune pool: {}", e)))?;
 
-        println!("✅ Saved record with ID: {}", result.id);
-        Ok(result.id)
+        let id = result.get::<i32, _>("id");
+        println!("✅ Saved record with ID: {}", id);
+        Ok(id)
     }
 
     pub async fn save_batch(&self, rune_pools: &[Runepool]) -> Result<Vec<i32>, AppError> {

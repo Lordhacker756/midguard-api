@@ -1,5 +1,4 @@
 use axum::{http::StatusCode, routing::get, Router};
-use client::proxy;
 use config::database;
 use dotenv::dotenv;
 use error::AppError;

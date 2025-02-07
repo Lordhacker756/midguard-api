@@ -16,14 +16,16 @@ impl<'a> PriceHistoryService<'a> {
     }
 
     pub async fn get_last_update_timestamp(&self) -> Result<i64, AppError> {
-        let record = sqlx::query!(
-            "SELECT start_time FROM depth_price_history ORDER BY start_time DESC LIMIT 1"
+        let record = sqlx::query(
+            "SELECT start_time FROM depth_price_history ORDER BY start_time DESC LIMIT 1",
         )
         .fetch_one(self.pool)
         .await
         .map_err(|e| AppError::new(format!("Failed to get last timestamp: {}", e)))?;
 
-        Ok(record.start_time.timestamp())
+        Ok(record
+            .get::<chrono::DateTime<chrono::Utc>, _>("start_time")
+            .timestamp())
     }
 
     pub async fn get_all_price_history(
@@ -114,36 +116,36 @@ impl<'a> PriceHistoryService<'a> {
 
     pub async fn save(&self, price_history: &PriceHistory) -> Result<i32, AppError> {
         println!("💾 Saving single price history record");
-        let result = sqlx::query!(
+        let result = sqlx::query(
             r#"
             INSERT INTO depth_price_history (
-                start_time, end_time, asset_depth, rune_depth,
-                asset_price, asset_price_usd, liquidity_units,
-                members_count, synth_units, synth_supply,
-                units, luvi
+            start_time, end_time, asset_depth, rune_depth,
+            asset_price, asset_price_usd, liquidity_units,
+            members_count, synth_units, synth_supply,
+            units, luvi
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING id
             "#,
-            price_history.start_time,
-            price_history.end_time,
-            price_history.asset_depth,
-            price_history.rune_depth,
-            price_history.asset_price,
-            price_history.asset_price_usd,
-            price_history.liquidity_units,
-            price_history.members_count,
-            price_history.synth_units,
-            price_history.synth_supply,
-            price_history.units,
-            price_history.luvi
         )
+        .bind(price_history.start_time)
+        .bind(price_history.end_time)
+        .bind(price_history.asset_depth)
+        .bind(price_history.rune_depth)
+        .bind(price_history.asset_price)
+        .bind(price_history.asset_price_usd)
+        .bind(price_history.liquidity_units)
+        .bind(price_history.members_count)
+        .bind(price_history.synth_units)
+        .bind(price_history.synth_supply)
+        .bind(price_history.units)
+        .bind(price_history.luvi)
         .fetch_one(self.pool)
         .await
         .map_err(|e| AppError::new(format!("Failed to save price history: {}", e)))?;
 
-        println!("✅ Saved record with ID: {}", result.id);
-        Ok(result.id)
+        println!("✅ Saved record with ID: {}", result.get::<i32, _>("id"));
+        Ok(result.get::<i32, _>("id"))
     }
 
     pub async fn save_batch(&self, price_histories: &[PriceHistory]) -> Result<Vec<i32>, AppError> {

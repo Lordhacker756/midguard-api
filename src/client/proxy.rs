@@ -185,9 +185,7 @@ pub async fn get_prev_2_months_swap_history() -> Result<(), AppError> {
     let swap_histories: Vec<SwapHistory> =
         final_data.iter().cloned().map(SwapHistory::from).collect();
 
-    println!("{:#?}", swap_histories[0]);
-
-    let res = swap_history_service
+    let _res = swap_history_service
         .save_batch(&swap_histories)
         .await
         .map_err(|e| AppError::new(format!("Failed to save swap history: {}", e)))?;

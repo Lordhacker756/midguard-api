@@ -18,14 +18,15 @@ impl<'a> EarningHistoryService<'a> {
     }
 
     pub async fn get_last_update_timestamp(&self) -> Result<i64, AppError> {
-        let record = sqlx::query!(
-            "SELECT start_time FROM earnings_history ORDER BY start_time DESC LIMIT 1"
-        )
-        .fetch_one(self.pool)
-        .await
-        .map_err(|e| AppError::new(format!("Failed to get last timestamp: {}", e)))?;
+        let record =
+            sqlx::query("SELECT start_time FROM earnings_history ORDER BY start_time DESC LIMIT 1")
+                .fetch_one(self.pool)
+                .await
+                .map_err(|e| AppError::new(format!("Failed to get last timestamp: {}", e)))?;
 
-        Ok(record.start_time.timestamp())
+        Ok(record
+            .get::<chrono::DateTime<chrono::Utc>, _>("start_time")
+            .timestamp())
     }
 
     pub async fn get_all_pools(
@@ -314,7 +315,7 @@ impl<'a> EarningHistoryService<'a> {
             earning_history_id
         );
         for pool in earning_history_pool {
-            let record = sqlx::query!(
+            let record = sqlx::query(
                 r#"
                     INSERT INTO pool_earnings(
                         earnings_history_id, pool, asset_liquidity_fees, 
@@ -324,26 +325,26 @@ impl<'a> EarningHistoryService<'a> {
                     VALUES($1, $2, $3, $4, $5, $6, $7, $8)
                     RETURNING id
                 "#,
-                earning_history_id,
-                pool.pool,
-                pool.asset_liquidity_fees,
-                pool.rune_liquidity_fees,
-                pool.total_liquidity_fees_rune,
-                pool.saver_earning,
-                pool.rewards.try_into().unwrap_or(0),
-                pool.earnings
             )
+            .bind(earning_history_id)
+            .bind(&pool.pool)
+            .bind(&pool.asset_liquidity_fees)
+            .bind(&pool.rune_liquidity_fees)
+            .bind(&pool.total_liquidity_fees_rune)
+            .bind(&pool.saver_earning)
+            .bind(&pool.rewards.try_into().unwrap_or(0))
+            .bind(&pool.earnings)
             .fetch_one(self.pool)
             .await
             .map_err(|e| AppError::new(format!("Failed to save pool: {}", e)))?;
 
-            inserted.push(record.id);
+            inserted.push(record.get::<i32, _>("id"));
         }
         Ok(inserted.len())
     }
 
     pub async fn save(&self, earning_history: &EarningHistory) -> Result<i32, AppError> {
-        let result = sqlx::query!(
+        let result = sqlx::query(
             r#"
             INSERT INTO earnings_history(
                 start_time, end_time, liquidity_fees, block_rewards, 
@@ -353,25 +354,26 @@ impl<'a> EarningHistoryService<'a> {
             VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id
             "#,
-            earning_history.start_time,
-            earning_history.end_time,
-            earning_history.liquidity_fees,
-            earning_history.block_rewards,
-            earning_history.earnings,
-            earning_history.bonding_earnings,
-            earning_history.liquidity_earnings,
-            earning_history.avg_node_count,
-            earning_history.rune_price_usd
         )
+        .bind(&earning_history.start_time)
+        .bind(&earning_history.end_time)
+        .bind(&earning_history.liquidity_fees)
+        .bind(&earning_history.block_rewards)
+        .bind(&earning_history.earnings)
+        .bind(&earning_history.bonding_earnings)
+        .bind(&earning_history.liquidity_earnings)
+        .bind(&earning_history.avg_node_count)
+        .bind(&earning_history.rune_price_usd)
         .fetch_one(self.pool)
         .await
         .map_err(|e| AppError::new(format!("Failed to save earning history: {}", e)))?;
 
         if let Some(pools) = &earning_history.pools {
-            self.save_pools(pools.as_slice(), result.id).await?;
+            self.save_pools(pools.as_slice(), result.get::<i32, _>("id"))
+                .await?;
         }
 
-        Ok(result.id)
+        Ok(result.get::<i32, _>("id"))
     }
 
     pub async fn save_batch(
@@ -445,7 +447,7 @@ impl<'a> EarningHistoryService<'a> {
             }
         }
 
-        if !all_pools.is_empty() {
+        if (!all_pools.is_empty()) {
             println!("Processing {} pool records", all_pools.len());
 
             let copy_pools = String::from(
