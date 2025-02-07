@@ -4,10 +4,13 @@ use crate::{model::swap_history::QueryParams, service::swap_history_service::Swa
 
 #[debug_handler]
 pub async fn get_all_swap_history(params: Query<QueryParams>) -> impl IntoResponse {
-    let swap_history_service = SwapHistoryService::new();
+    let swap_history_service = match SwapHistoryService::new() {
+        Ok(service) => service,
+        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+    };
 
     match swap_history_service.get_all_swap_history(params).await {
         Ok(res) => Ok((StatusCode::OK, Json(res))),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string()))),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
     }
 }

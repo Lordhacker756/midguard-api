@@ -1,9 +1,9 @@
 use crate::{
     config::database::get_pool,
+    error::AppError,
     model::rune_pool::{QueryParams, Runepool},
 };
-use anyhow::{Error, Result};
-use axum::extract::Query;
+use axum::{extract::Query, http::StatusCode};
 use sqlx::{Execute, PgPool, Postgres, QueryBuilder};
 
 pub struct RunePoolService<'a> {
@@ -11,16 +11,22 @@ pub struct RunePoolService<'a> {
 }
 
 impl<'a> RunePoolService<'a> {
-    pub fn new() -> Self {
-        Self { pool: get_pool() }
+    pub fn new() -> Result<Self, AppError> {
+        println!("📊 Initializing RunePoolService");
+        Ok(Self {
+            pool: get_pool().map_err(|e| {
+                AppError::new(format!("Failed to initialize database pool: {:#?}", e))
+            })?,
+        })
     }
 
-    pub async fn get_last_update_timestamp(&self) -> Result<i64, Error> {
+    pub async fn get_last_update_timestamp(&self) -> Result<i64, AppError> {
         let record = sqlx::query!(
             "SELECT start_time FROM rune_pool_history ORDER BY start_time DESC LIMIT 1"
         )
         .fetch_one(self.pool)
-        .await?;
+        .await
+        .map_err(|e| AppError::new(format!("Failed to get last timestamp: {}", e)))?;
 
         Ok(record.start_time.timestamp())
     }
@@ -28,7 +34,8 @@ impl<'a> RunePoolService<'a> {
     pub async fn get_all_runepools(
         &self,
         params: Query<QueryParams>,
-    ) -> Result<Vec<Runepool>, Error> {
+    ) -> Result<Vec<Runepool>, AppError> {
+        println!("🔍 Fetching rune pools with params: {:?}", params);
         let mut qb = QueryBuilder::<Postgres>::new("SELECT * FROM rune_pool_history WHERE true");
 
         // Interval filter
@@ -103,13 +110,18 @@ impl<'a> RunePoolService<'a> {
         }
 
         let query = qb.build_query_as::<Runepool>();
-        println!("SQL Query: {}", query.sql());
-        let result = query.fetch_all(self.pool).await?;
+        println!("🔎 Executing SQL Query: {}", query.sql());
+        let result = query
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| AppError::new(format!("Failed to fetch rune pools: {}", e)))?;
 
+        println!("✅ Found {} records", result.len());
         Ok(result)
     }
 
-    pub async fn save(&self, rune_pool: &Runepool) -> Result<i32> {
+    pub async fn save(&self, rune_pool: &Runepool) -> Result<i32, AppError> {
+        println!("💾 Saving single rune pool record");
         let result = sqlx::query!(
             r#"
                 INSERT INTO rune_pool_history (
@@ -124,26 +136,43 @@ impl<'a> RunePoolService<'a> {
             rune_pool.units
         )
         .fetch_one(self.pool)
-        .await?;
+        .await
+        .map_err(|e| AppError::new(format!("Failed to save rune pool: {}", e)))?;
 
+        println!("✅ Saved record with ID: {}", result.id);
         Ok(result.id)
     }
 
-    pub async fn save_batch(&self, rune_pools: &[Runepool]) -> Result<Vec<i32>> {
+    pub async fn save_batch(&self, rune_pools: &[Runepool]) -> Result<Vec<i32>, AppError> {
+        if rune_pools.is_empty() {
+            return Err(AppError::new("No rune pools provided for batch save"));
+        }
+
         println!("📦 Batch saving {} rune pool records", rune_pools.len());
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to start transaction: {}", e)))?;
 
         let copy = String::from(
             "COPY rune_pool_history (start_time, end_time, count, units) \
              FROM STDIN WITH (FORMAT text, DELIMITER '\t')",
         );
 
-        let mut writer = tx.copy_in_raw(&copy).await?;
+        let mut writer = tx
+            .copy_in_raw(&copy)
+            .await
+            .map_err(|e| AppError::new(format!("Failed to initialize batch write: {}", e)))?;
 
         // Process in chunks of 5000 records
         for (chunk_idx, chunk) in rune_pools.chunks(5000).enumerate() {
-            println!("Processing chunk {}", chunk_idx + 1);
+            println!(
+                "Processing chunk {} of {}",
+                chunk_idx + 1,
+                (rune_pools.len() + 4999) / 5000
+            );
             let mut batch_data = String::with_capacity(chunk.len() * 256);
 
             for rune_pool in chunk {
@@ -156,23 +185,31 @@ impl<'a> RunePoolService<'a> {
                 ));
             }
 
-            writer.send(batch_data.as_bytes()).await?;
+            writer
+                .send(batch_data.as_bytes())
+                .await
+                .map_err(|e| AppError::new(format!("Failed to write batch data: {}", e)))?;
         }
 
-        writer.finish().await?;
+        writer
+            .finish()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to finish batch write: {}", e)))?;
 
         let ids = sqlx::query_as::<_, (i32,)>(
             "SELECT id FROM rune_pool_history ORDER BY id DESC LIMIT $1",
         )
         .bind(rune_pools.len() as i32)
         .fetch_all(&mut *tx)
-        .await?
-        .into_iter()
-        .map(|(id,)| id)
-        .collect();
+        .await
+        .map_err(|e| AppError::new(format!("Failed to retrieve inserted IDs: {}", e)))?;
 
-        tx.commit().await?;
-        println!("✅ Successfully saved {} records", rune_pools.len());
+        tx.commit()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to commit transaction: {}", e)))?;
+
+        let ids = ids.into_iter().map(|(id,)| id).collect();
+        println!("🎉 Successfully saved {} records", rune_pools.len());
         Ok(ids)
     }
 }

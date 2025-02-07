@@ -1,9 +1,9 @@
 use crate::{
     config::database::get_pool,
+    error::AppError,
     model::price_history::{PriceHistory, PriceHistoryParams},
 };
-use anyhow::{Error, Result};
-use axum::extract::Query;
+use axum::{extract::Query, http::StatusCode};
 use sqlx::{Execute, PgPool, Postgres, QueryBuilder, Row};
 
 pub struct PriceHistoryService<'a> {
@@ -11,17 +11,17 @@ pub struct PriceHistoryService<'a> {
 }
 
 impl<'a> PriceHistoryService<'a> {
-    pub fn new() -> Self {
-        println!("📊 Initializing PriceHistoryService");
-        Self { pool: get_pool() }
+    pub fn new() -> Result<Self, AppError> {
+        Ok(Self { pool: get_pool()? })
     }
 
-    pub async fn get_last_update_timestamp(&self) -> Result<i64, Error> {
+    pub async fn get_last_update_timestamp(&self) -> Result<i64, AppError> {
         let record = sqlx::query!(
             "SELECT start_time FROM depth_price_history ORDER BY start_time DESC LIMIT 1"
         )
         .fetch_one(self.pool)
-        .await?;
+        .await
+        .map_err(|e| AppError::new(format!("Failed to get last timestamp: {}", e)))?;
 
         Ok(record.start_time.timestamp())
     }
@@ -29,7 +29,7 @@ impl<'a> PriceHistoryService<'a> {
     pub async fn get_all_price_history(
         &self,
         params: Query<PriceHistoryParams>,
-    ) -> Result<Vec<PriceHistory>, Error> {
+    ) -> Result<Vec<PriceHistory>, AppError> {
         println!("🔍 Fetching price history with params: {:?}", params);
         let mut qb = QueryBuilder::<Postgres>::new("SELECT * FROM depth_price_history WHERE true");
         // Interval filter
@@ -84,7 +84,11 @@ impl<'a> PriceHistoryService<'a> {
         // ✅ Execute the query
         let query = qb.build();
         println!("🔎 Executing SQL Query: {}", query.sql());
-        let result = query.fetch_all(self.pool).await?;
+        let result = query.fetch_all(self.pool).await.map_err(|e| {
+            AppError::new(format!("Failed to fetch price history: {}", e))
+                .with_status(StatusCode::INTERNAL_SERVER_ERROR)
+        })?;
+
         println!("✅ Found {} records", result.len());
 
         // ✅ Map result to struct
@@ -108,7 +112,7 @@ impl<'a> PriceHistoryService<'a> {
             .collect())
     }
 
-    pub async fn save(&self, price_history: &PriceHistory) -> Result<i32> {
+    pub async fn save(&self, price_history: &PriceHistory) -> Result<i32, AppError> {
         println!("💾 Saving single price history record");
         let result = sqlx::query!(
             r#"
@@ -135,19 +139,24 @@ impl<'a> PriceHistoryService<'a> {
             price_history.luvi
         )
         .fetch_one(self.pool)
-        .await?;
+        .await
+        .map_err(|e| AppError::new(format!("Failed to save price history: {}", e)))?;
 
         println!("✅ Saved record with ID: {}", result.id);
         Ok(result.id)
     }
 
-    pub async fn save_batch(&self, price_histories: &[PriceHistory]) -> Result<Vec<i32>> {
+    pub async fn save_batch(&self, price_histories: &[PriceHistory]) -> Result<Vec<i32>, AppError> {
         println!(
             "📦 Batch saving {} price history records",
             price_histories.len()
         );
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to start transaction: {}", e)))?;
 
         let copy = String::from(
             "COPY depth_price_history (start_time, end_time, asset_depth, rune_depth, \
@@ -155,7 +164,10 @@ impl<'a> PriceHistoryService<'a> {
          synth_supply, units, luvi) FROM STDIN WITH (FORMAT text, DELIMITER '\t')",
         );
 
-        let mut writer = tx.copy_in_raw(&copy).await?;
+        let mut writer = tx
+            .copy_in_raw(&copy)
+            .await
+            .map_err(|e| AppError::new(format!("Failed to initialize batch write: {}", e)))?;
 
         // Process in chunks of 5000 records
         for chunk in price_histories.chunks(5000) {
@@ -179,23 +191,30 @@ impl<'a> PriceHistoryService<'a> {
                 ));
             }
 
-            writer.send(batch_data.as_bytes()).await?;
+            writer
+                .send(batch_data.as_bytes())
+                .await
+                .map_err(|e| AppError::new(format!("Failed to write batch data: {}", e)))?;
         }
 
-        writer.finish().await?;
+        writer
+            .finish()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to finish batch write: {}", e)))?;
 
         let ids = sqlx::query_as::<_, (i32,)>(
             "SELECT id FROM depth_price_history ORDER BY id DESC LIMIT $1",
         )
         .bind(price_histories.len() as i32)
         .fetch_all(&mut *tx)
-        .await?
-        .into_iter()
-        .map(|(id,)| id)
-        .collect();
+        .await
+        .map_err(|e| AppError::new(format!("Failed to retrieve inserted IDs: {}", e)))?;
 
-        tx.commit().await?;
+        tx.commit()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to commit transaction: {}", e)))?;
 
+        let ids = ids.into_iter().map(|(id,)| id).collect();
         println!("🎉 Successfully saved {} records", price_histories.len());
         Ok(ids)
     }

@@ -1,30 +1,29 @@
-use anyhow::{Error, Result};
+use crate::error::AppError;
+use crate::model::{
+    earning_history::{EarningHistory, QueryParams},
+    earning_history_pool::EarningHistoryPool,
+};
 use axum::extract::Query;
 use sqlx::{Execute, PgPool, Postgres, QueryBuilder, Row};
-
-use crate::{
-    config::database::get_pool,
-    model::{
-        earning_history::{EarningHistory, QueryParams},
-        earning_history_pool::EarningHistoryPool,
-    },
-};
 
 pub struct EarningHistoryService<'a> {
     pool: &'a PgPool,
 }
 
 impl<'a> EarningHistoryService<'a> {
-    pub fn new() -> Self {
-        Self { pool: get_pool() }
+    pub fn new() -> Result<Self, AppError> {
+        Ok(Self {
+            pool: crate::config::database::get_pool()?,
+        })
     }
 
-    pub async fn get_last_update_timestamp(&self) -> Result<i64, Error> {
+    pub async fn get_last_update_timestamp(&self) -> Result<i64, AppError> {
         let record = sqlx::query!(
             "SELECT start_time FROM earnings_history ORDER BY start_time DESC LIMIT 1"
         )
         .fetch_one(self.pool)
-        .await?;
+        .await
+        .map_err(|e| AppError::new(format!("Failed to get last timestamp: {}", e)))?;
 
         Ok(record.start_time.timestamp())
     }
@@ -33,7 +32,7 @@ impl<'a> EarningHistoryService<'a> {
         &self,
         earning_history_id: i32,
         params: &Query<QueryParams>,
-    ) -> Result<Vec<EarningHistoryPool>> {
+    ) -> Result<Vec<EarningHistoryPool>, AppError> {
         let mut qb = QueryBuilder::<Postgres>::new(
             "SELECT * FROM pool_earnings WHERE earnings_history_id = ",
         );
@@ -112,7 +111,10 @@ impl<'a> EarningHistoryService<'a> {
 
         let query = qb.build();
         println!("SQL Query: {}", query.sql().to_string());
-        let result = query.fetch_all(self.pool).await?;
+        let result = query
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| AppError::new(format!("Failed to fetch pools: {}", e)))?;
 
         Ok(result
             .into_iter()
@@ -133,7 +135,7 @@ impl<'a> EarningHistoryService<'a> {
     pub async fn get_all_earnings_history(
         &self,
         params: Query<QueryParams>,
-    ) -> Result<Vec<EarningHistory>, Error> {
+    ) -> Result<Vec<EarningHistory>, AppError> {
         let mut qb = QueryBuilder::<Postgres>::new("SELECT * FROM earnings_history WHERE true");
         if let Some(interval) = &params.interval {
             let interval_code = match interval.as_str() {
@@ -270,7 +272,10 @@ impl<'a> EarningHistoryService<'a> {
 
         let query = qb.build();
         println!("SQL Query: {}", query.sql().to_string());
-        let result = query.fetch_all(self.pool).await?;
+        let result = query
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| AppError::new(format!("Failed to fetch earnings history: {}", e)))?;
 
         let mut earnings = result
             .into_iter()
@@ -301,7 +306,7 @@ impl<'a> EarningHistoryService<'a> {
         &self,
         earning_history_pool: &[EarningHistoryPool],
         earning_history_id: i32,
-    ) -> Result<usize> {
+    ) -> Result<usize, AppError> {
         let mut inserted: Vec<i32> = Vec::with_capacity(earning_history_pool.len());
         println!(
             "Inserted {} pools for earning_history_id:: {} ✅",
@@ -329,14 +334,15 @@ impl<'a> EarningHistoryService<'a> {
                 pool.earnings
             )
             .fetch_one(self.pool)
-            .await?;
+            .await
+            .map_err(|e| AppError::new(format!("Failed to save pool: {}", e)))?;
 
             inserted.push(record.id);
         }
         Ok(inserted.len())
     }
 
-    pub async fn save(&self, earning_history: &EarningHistory) -> Result<i32> {
+    pub async fn save(&self, earning_history: &EarningHistory) -> Result<i32, AppError> {
         let result = sqlx::query!(
             r#"
             INSERT INTO earnings_history(
@@ -358,7 +364,8 @@ impl<'a> EarningHistoryService<'a> {
             earning_history.rune_price_usd
         )
         .fetch_one(self.pool)
-        .await?;
+        .await
+        .map_err(|e| AppError::new(format!("Failed to save earning history: {}", e)))?;
 
         if let Some(pools) = &earning_history.pools {
             self.save_pools(pools.as_slice(), result.id).await?;
@@ -367,13 +374,20 @@ impl<'a> EarningHistoryService<'a> {
         Ok(result.id)
     }
 
-    pub async fn save_batch(&self, earning_histories: &[EarningHistory]) -> Result<Vec<i32>> {
+    pub async fn save_batch(
+        &self,
+        earning_histories: &[EarningHistory],
+    ) -> Result<Vec<i32>, AppError> {
         println!(
             "📦 Batch saving {} earning history records",
             earning_histories.len()
         );
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to start transaction: {}", e)))?;
 
         // First insert main records
         let copy = String::from(
@@ -467,7 +481,10 @@ impl<'a> EarningHistoryService<'a> {
             pool_writer.finish().await?;
         }
 
-        tx.commit().await?;
+        tx.commit()
+            .await
+            .map_err(|e| AppError::new(format!("Failed to commit transaction: {}", e)))?;
+
         println!(
             "✅ Successfully saved {} earning histories with their pools",
             earning_histories.len()
