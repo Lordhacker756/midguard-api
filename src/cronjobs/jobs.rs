@@ -3,10 +3,10 @@ use axum::http::StatusCode;
 use chrono::Utc;
 use cron::Schedule;
 use std::str::FromStr;
-use std::thread;
+use tokio::time::sleep;
 
 pub async fn run() -> Result<(), AppError> {
-    let expression = "0 */1 * * * *";
+    let expression = "0 0 */23 * * *";
     let schedule = Schedule::from_str(expression).map_err(|e| {
         AppError::new(format!("Invalid cron expression: {}", e))
             .with_status(StatusCode::INTERNAL_SERVER_ERROR)
@@ -30,6 +30,6 @@ pub async fn run() -> Result<(), AppError> {
             Err(e) => println!("Failed ❌: {:#?}", e),
         }
         println!("Next job at: {}", next);
-        thread::sleep(duration);
+        sleep(duration).await;
     }
 }
