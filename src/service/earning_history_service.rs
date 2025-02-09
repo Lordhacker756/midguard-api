@@ -151,7 +151,7 @@ impl<'a> EarningHistoryService<'a> {
             };
 
             qb.push(" AND start_time in (");
-            qb.push("SELECT DISCTINCT ON (")
+            qb.push("SELECT DISTINCT ON (")
                 .push(interval_code)
                 .push(") start_time FROM earnings_history");
             qb.push(" WHERE true ");
