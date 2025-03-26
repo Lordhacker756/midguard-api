@@ -1,9 +1,9 @@
 use axum::{http::StatusCode, routing::get, Router};
-use config::database;
+use config::database::{self, init_surrealdb};
 use dotenv::dotenv;
 use error::AppError;
 use paris::{info, Logger};
-use repositories::mongodb::MongoPollRepository;
+use repositories::{mongodb::MongoPollRepository, surrealdb::SurrealRepository};
 use routes::{
     earning_history_route::get_all_earnings_history, price_history_route::get_price_depth_history,
     rune_pool_route::get_all_runepools, swap_history_route::get_all_swap_history,
@@ -25,10 +25,10 @@ async fn main() -> Result<(), AppError> {
     dotenv().ok();
     Logger::new();
 
-    info!("Connecting to postgres database 📔");
-    config::database::initialize_database()
-        .await
-        .map_err(|e| AppError::new(e.to_string()).with_status(StatusCode::INTERNAL_SERVER_ERROR))?;
+    // info!("Connecting to postgres database 📔");
+    // config::database::initialize_database()
+    //     .await
+    //     .map_err(|e| AppError::new(e.to_string()).with_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
     config::database::init_mongodb()
         .await
@@ -48,6 +48,12 @@ async fn main() -> Result<(), AppError> {
     //         eprintln!("Cronjob error: {}", e);
     //     }
     // });
+
+    init_surrealdb().await?;
+
+    let surreal_repo = SurrealRepository::new().await;
+    surreal_repo.insert_into_surreal_db().await;
+    surreal_repo.read_from_surreal_db().await;
 
     let app = Router::new()
         .route("/depth-history", get(get_price_depth_history))
