@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use mongodb::Collection;
-use paris::{info, success};
+use paris::{error, info, success};
 use serde::Serialize;
 use tokio::time::{sleep, Duration};
 
@@ -62,7 +62,7 @@ impl MongoPollRepository {
             from
         );
 
-            println!("GET:: {} || {}", url, count);
+            // println!("GET:: {} || {}", url, count);
 
             // Add delay between requests (500ms)
             sleep(Duration::from_millis(500)).await;
@@ -107,6 +107,11 @@ impl MongoPollRepository {
             .map(MongoRunePool::from)
             .collect();
 
+        info!("Removing old data from mongodb...");
+        let _ = self.pools.drop().await.map_err(|e| {
+            error!("Error dropping collection {:#?}", e.to_string());
+        });
+
         info!("Inserting data into mongodb...");
 
         //Insert the data into the database
@@ -116,7 +121,7 @@ impl MongoPollRepository {
             Ok(_) => {
                 let elapsed = start_time.elapsed();
                 success!(
-                    "Mongodb populated successfully! Inserted {} records in {:.2} seconds",
+                    "Mongodb populated successfully! Inserted {} records in {:.5} seconds",
                     runepools.len(),
                     elapsed.as_secs_f64()
                 );
@@ -134,7 +139,7 @@ impl MongoPollRepository {
         match self.pools.find(mongodb::bson::doc! {}).await {
             Ok(_) => {
                 let elapsed = start_time.elapsed();
-                success!("Read 2000 rows in {:.2}s", elapsed.as_secs_f64());
+                success!("Read 2000 rows in {:.5}s", elapsed.as_secs_f64());
                 Ok(())
             }
             Err(e) => Err(AppError::new(e.to_string())),
